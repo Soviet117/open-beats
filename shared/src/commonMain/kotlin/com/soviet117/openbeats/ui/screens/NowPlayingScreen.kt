@@ -34,10 +34,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -60,16 +57,21 @@ fun NowPlayingScreen(
     song: Song,
     playing: Boolean,
     isLiked: Boolean,
+    positionMs: Long = 0L,
+    durationMs: Long = song.durationMs,
     modifier: Modifier = Modifier,
     onClose: () -> Unit = {},
     onTogglePlay: () -> Unit = {},
     onToggleLike: () -> Unit = {},
+    onNext: () -> Unit = {},
+    onPrevious: () -> Unit = {},
+    onSeek: (Long) -> Unit = {},
 ) {
-    var progress by remember { mutableFloatStateOf(45_000f) }
     val backdrop = Brush.verticalGradient(
         listOf(song.colors.first().copy(alpha = 0.55f), Obsidian, Obsidian),
     )
-    val duration = song.durationMs.toFloat()
+    val sliderDuration = durationMs.coerceAtLeast(1L).toFloat()
+    val sliderPosition = positionMs.coerceIn(0L, durationMs.coerceAtLeast(1L)).toFloat()
 
     Box(
         modifier = modifier
@@ -147,9 +149,9 @@ fun NowPlayingScreen(
             }
             Spacer(Modifier.height(8.dp))
             Slider(
-                value = progress,
-                onValueChange = { progress = it },
-                valueRange = 0f..duration,
+                value = sliderPosition,
+                onValueChange = { onSeek(it.toLong()) },
+                valueRange = 0f..sliderDuration,
                 colors = SliderDefaults.colors(
                     thumbColor = TextPrimary,
                     activeTrackColor = BrandViolet,
@@ -158,13 +160,13 @@ fun NowPlayingScreen(
             )
             Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = formatDuration(progress.toLong()),
+                    text = formatDuration(positionMs),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextMuted,
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    text = formatDuration(song.durationMs),
+                    text = formatDuration(durationMs),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextMuted,
                 )
@@ -181,7 +183,7 @@ fun NowPlayingScreen(
                     tint = TextMuted,
                     modifier = Modifier.size(22.dp),
                 )
-                IconButton(onClick = {}) {
+                IconButton(onClick = onPrevious) {
                     Icon(
                         imageVector = Icons.Rounded.SkipPrevious,
                         contentDescription = null,
@@ -194,7 +196,7 @@ fun NowPlayingScreen(
                     playing = playing,
                     onClick = onTogglePlay,
                 )
-                IconButton(onClick = {}) {
+                IconButton(onClick = onNext) {
                     Icon(
                         imageVector = Icons.Rounded.SkipNext,
                         contentDescription = null,

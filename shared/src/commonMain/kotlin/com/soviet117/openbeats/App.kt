@@ -24,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +35,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.soviet117.openbeats.audio.AudioLibrary
+import com.soviet117.openbeats.audio.MockPlayerController
+import com.soviet117.openbeats.audio.PlayerController
+import com.soviet117.openbeats.audio.PlayerState
 import com.soviet117.openbeats.ui.components.MiniPlayer
 import com.soviet117.openbeats.ui.data.Mock
 import com.soviet117.openbeats.ui.data.Song
@@ -66,12 +70,11 @@ fun App(
     permissionGranted: Boolean = true,
     onRequestPermission: () -> Unit = {},
     audioLibrary: AudioLibrary? = null,
+    playerController: PlayerController? = null,
 ) {
     OpenBeatsTheme {
         var selectedTab by remember { mutableIntStateOf(0) }
         var songs by remember { mutableStateOf(Mock.songs) }
-        var currentSong by remember { mutableStateOf(Mock.songs[1]) }
-        var isPlaying by remember { mutableStateOf(true) }
         var isLiked by remember { mutableStateOf(false) }
         var showPlayer by remember { mutableStateOf(false) }
 
@@ -81,6 +84,19 @@ fun App(
                 if (loaded.isNotEmpty()) songs = loaded
             }
         }
+
+        val controller = playerController ?: remember {
+            MockPlayerController(
+                PlayerState(
+                    queue = Mock.songs,
+                    currentIndex = 1,
+                    isPlaying = true,
+                    durationMs = Mock.songs[1].durationMs,
+                ),
+            )
+        }
+        val playerState by controller.state.collectAsState()
+        val currentSong = playerState.currentSong
 
         if (!permissionGranted) {
             PermissionScreen(onRequestPermission = onRequestPermission)
@@ -97,12 +113,14 @@ fun App(
                         exit = fadeOut(),
                     ) {
                         Column {
-                            MiniPlayer(
-                                song = currentSong,
-                                playing = isPlaying,
-                                onTap = { showPlayer = true },
-                                onTogglePlay = { isPlaying = !isPlaying },
-                            )
+                            if (currentSong != null) {
+                                MiniPlayer(
+                                    song = currentSong,
+                                    playing = playerState.isPlaying,
+                                    onTap = { showPlayer = true },
+                                    onTogglePlay = { controller.playPause() },
+                                )
+                            }
                             NavigationBar(
                                 containerColor = Obsidian,
                                 tonalElevation = 0.dp,
@@ -134,33 +152,40 @@ fun App(
             ) { padding ->
                 Box(modifier = Modifier.fillMaxSize().padding(padding)) {
                     when (selectedTab) {
-                    0 -> HomeScreen(
-                        songs = songs,
-                        onPlay = { song ->
-                            currentSong = song
-                            isPlaying = true
-                            showPlayer = true
-                        },
-                    )
+                        0 -> HomeScreen(
+                            songs = songs,
+                            onPlay = { song ->
+                                val index = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                                controller.setQueue(songs, index)
+                                showPlayer = true
+                            },
+                        )
                         1 -> SearchScreen()
                         else -> LibraryScreen()
                     }
                 }
             }
 
-            AnimatedVisibility(
-                visible = showPlayer,
-                enter = fadeIn() + slideInVertically { it },
-                exit = fadeOut() + slideOutVertically { it },
-            ) {
-                NowPlayingScreen(
-                    song = currentSong,
-                    playing = isPlaying,
-                    isLiked = isLiked,
-                    onClose = { showPlayer = false },
-                    onTogglePlay = { isPlaying = !isPlaying },
-                    onToggleLike = { isLiked = !isLiked },
-                )
+            if (currentSong != null) {
+                AnimatedVisibility(
+                    visible = showPlayer,
+                    enter = fadeIn() + slideInVertically { it },
+                    exit = fadeOut() + slideOutVertically { it },
+                ) {
+                    NowPlayingScreen(
+                        song = currentSong,
+                        playing = playerState.isPlaying,
+                        isLiked = isLiked,
+                        positionMs = playerState.positionMs,
+                        durationMs = playerState.durationMs.takeIf { it > 0 } ?: currentSong.durationMs,
+                        onClose = { showPlayer = false },
+                        onTogglePlay = { controller.playPause() },
+                        onToggleLike = { isLiked = !isLiked },
+                        onNext = { controller.next() },
+                        onPrevious = { controller.previous() },
+                        onSeek = { controller.seekTo(it) },
+                    )
+                }
             }
         }
     }
