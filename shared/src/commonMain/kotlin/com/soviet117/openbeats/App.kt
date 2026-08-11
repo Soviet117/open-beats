@@ -37,6 +37,7 @@ import com.soviet117.openbeats.ui.data.Mock
 import com.soviet117.openbeats.ui.screens.HomeScreen
 import com.soviet117.openbeats.ui.screens.LibraryScreen
 import com.soviet117.openbeats.ui.screens.NowPlayingScreen
+import com.soviet117.openbeats.ui.screens.PermissionScreen
 import com.soviet117.openbeats.ui.screens.SearchScreen
 import com.soviet117.openbeats.ui.theme.BrandSoft
 import com.soviet117.openbeats.ui.theme.Obsidian
@@ -58,13 +59,21 @@ private val Tabs = listOf(
 
 @Composable
 @Preview
-fun App() {
+fun App(
+    permissionGranted: Boolean = true,
+    onRequestPermission: () -> Unit = {},
+) {
     OpenBeatsTheme {
         var selectedTab by remember { mutableIntStateOf(0) }
         var currentSong by remember { mutableStateOf(Mock.songs[1]) }
         var isPlaying by remember { mutableStateOf(true) }
         var isLiked by remember { mutableStateOf(Mock.songs[1].id == 1) }
         var showPlayer by remember { mutableStateOf(false) }
+
+        if (!permissionGranted) {
+            PermissionScreen(onRequestPermission = onRequestPermission)
+            return@OpenBeatsTheme
+        }
 
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
