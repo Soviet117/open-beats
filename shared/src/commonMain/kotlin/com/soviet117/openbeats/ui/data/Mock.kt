@@ -3,10 +3,12 @@ package com.soviet117.openbeats.ui.data
 import androidx.compose.ui.graphics.Color
 
 data class Song(
-    val id: Int,
+    val id: String,
     val title: String,
     val artist: String,
-    val durationSec: Int,
+    val album: String,
+    val durationMs: Long,
+    val artwork: ByteArray? = null,
     val colors: List<Color>,
 )
 
@@ -30,9 +32,10 @@ data class Genre(
     val colors: List<Color>,
 )
 
-fun formatDuration(sec: Int): String {
-    val minutes = sec / 60
-    val seconds = sec % 60
+fun formatDuration(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
     return "$minutes:${seconds.toString().padStart(2, '0')}"
 }
 
@@ -48,16 +51,16 @@ object Mock {
     private val cVioletCyan = listOf(Color(0xFF8B5CF6), Color(0xFF06B6D4))
 
     val songs = listOf(
-        Song(1, "Noche de Cristal", "Luna Radiante", 222, cVioletPink),
-        Song(2, "Midnight Drive", "Neon Harbor", 198, cCyanBlue),
-        Song(3, "Baila Conmigo", "Ritmo Solar", 185, cAmberRed),
-        Song(4, "Electric Dreams", "Nova Wave", 241, cPinkViolet),
-        Song(5, "Café en Domingo", "Los Buenos Días", 167, cTealLime),
-        Song(6, "Gravity", "Astra Nova", 213, cVioletCyan),
-        Song(7, "Olas del Mar", "Brisa Tropical", 236, cEmeraldBlue),
-        Song(8, "City Lights", "Neon Harbor", 179, cCyanBlue),
-        Song(9, "Corazón Rebelde", "Luna Radiante", 201, cOrangeRose),
-        Song(10, "Pixel Hearts", "Nova Wave", 191, cPinkViolet),
+        Song("mock-1", "Noche de Cristal", "Luna Radiante", "Éxitos de Luna", 222_000, colors = cVioletPink),
+        Song("mock-2", "Midnight Drive", "Neon Harbor", "Horizonte Sintético", 198_000, colors = cCyanBlue),
+        Song("mock-3", "Baila Conmigo", "Ritmo Solar", "Fuego Latino", 185_000, colors = cAmberRed),
+        Song("mock-4", "Electric Dreams", "Nova Wave", "Puro Pop", 241_000, colors = cPinkViolet),
+        Song("mock-5", "Café en Domingo", "Los Buenos Días", "Momentos Suaves", 167_000, colors = cTealLime),
+        Song("mock-6", "Gravity", "Astra Nova", "Neón en la Noche", 213_000, colors = cVioletCyan),
+        Song("mock-7", "Olas del Mar", "Brisa Tropical", "Éxitos del Verano", 236_000, colors = cEmeraldBlue),
+        Song("mock-8", "City Lights", "Neon Harbor", "Horizonte Sintético", 179_000, colors = cCyanBlue),
+        Song("mock-9", "Corazón Rebelde", "Luna Radiante", "Melodías del Alma", 201_000, colors = cOrangeRose),
+        Song("mock-10", "Pixel Hearts", "Nova Wave", "Puro Pop", 191_000, colors = cPinkViolet),
     )
 
     val playlists = listOf(

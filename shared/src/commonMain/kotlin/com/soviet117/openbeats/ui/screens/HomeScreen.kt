@@ -40,6 +40,7 @@ import com.soviet117.openbeats.ui.theme.TextSecondary
 
 @Composable
 fun HomeScreen(
+    songs: List<Song>,
     onPlay: (Song) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -101,7 +102,7 @@ fun HomeScreen(
                             RecentTile(
                                 playlist = playlist,
                                 modifier = Modifier.weight(1f),
-                                onClick = { onPlay(Mock.songs.first()) },
+                                onClick = { if (songs.isNotEmpty()) onPlay(songs.first()) },
                             )
                         }
                         if (rowItems.size == 1) {
@@ -139,7 +140,7 @@ fun HomeScreen(
         item {
             Spacer(Modifier.height(4.dp))
         }
-        itemsIndexed(Mock.songs) { index, song ->
+        itemsIndexed(songs) { index, song ->
             SongRow(
                 song = song,
                 index = index + 1,

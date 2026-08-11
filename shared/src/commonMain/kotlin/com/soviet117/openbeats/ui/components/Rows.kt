@@ -53,8 +53,8 @@ fun SongRow(
             )
             Spacer(Modifier.width(12.dp))
         }
-        Artwork(
-            colors = song.colors,
+        SongArtwork(
+            song = song,
             modifier = Modifier.size(52.dp),
             corner = 10.dp,
             noteSize = 20.dp,
@@ -85,7 +85,7 @@ fun SongRow(
         )
         Spacer(Modifier.width(12.dp))
         Text(
-            text = formatDuration(song.durationSec),
+            text = formatDuration(song.durationMs),
             style = MaterialTheme.typography.bodySmall,
             color = TextMuted,
         )

@@ -60,8 +60,8 @@ fun MiniPlayer(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Artwork(
-                colors = song.colors,
+            SongArtwork(
+                song = song,
                 modifier = Modifier.size(42.dp),
                 corner = 8.dp,
                 noteSize = 18.dp,

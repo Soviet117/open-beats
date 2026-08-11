@@ -44,8 +44,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.soviet117.openbeats.ui.components.Artwork
 import com.soviet117.openbeats.ui.components.PlayButton
+import com.soviet117.openbeats.ui.components.SongArtwork
 import com.soviet117.openbeats.ui.data.Song
 import com.soviet117.openbeats.ui.data.formatDuration
 import com.soviet117.openbeats.ui.theme.BrandViolet
@@ -65,11 +65,11 @@ fun NowPlayingScreen(
     onTogglePlay: () -> Unit = {},
     onToggleLike: () -> Unit = {},
 ) {
-    var progress by remember { mutableFloatStateOf(45f) }
+    var progress by remember { mutableFloatStateOf(45_000f) }
     val backdrop = Brush.verticalGradient(
         listOf(song.colors.first().copy(alpha = 0.55f), Obsidian, Obsidian),
     )
-    val duration = song.durationSec.toFloat()
+    val duration = song.durationMs.toFloat()
 
     Box(
         modifier = modifier
@@ -111,14 +111,13 @@ fun NowPlayingScreen(
                 }
             }
             Spacer(Modifier.height(24.dp))
-            Artwork(
-                colors = song.colors,
+            SongArtwork(
+                song = song,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f),
                 corner = 24.dp,
                 noteSize = 72.dp,
-                noteAlpha = 0.4f,
             )
             Spacer(Modifier.height(36.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -159,13 +158,13 @@ fun NowPlayingScreen(
             )
             Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = formatDuration(progress.toInt()),
+                    text = formatDuration(progress.toLong()),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextMuted,
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    text = formatDuration(song.durationSec),
+                    text = formatDuration(song.durationMs),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextMuted,
                 )

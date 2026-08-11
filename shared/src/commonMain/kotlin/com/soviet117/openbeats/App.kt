@@ -23,6 +23,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -32,8 +33,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.soviet117.openbeats.audio.AudioLibrary
 import com.soviet117.openbeats.ui.components.MiniPlayer
 import com.soviet117.openbeats.ui.data.Mock
+import com.soviet117.openbeats.ui.data.Song
 import com.soviet117.openbeats.ui.screens.HomeScreen
 import com.soviet117.openbeats.ui.screens.LibraryScreen
 import com.soviet117.openbeats.ui.screens.NowPlayingScreen
@@ -62,13 +65,22 @@ private val Tabs = listOf(
 fun App(
     permissionGranted: Boolean = true,
     onRequestPermission: () -> Unit = {},
+    audioLibrary: AudioLibrary? = null,
 ) {
     OpenBeatsTheme {
         var selectedTab by remember { mutableIntStateOf(0) }
+        var songs by remember { mutableStateOf(Mock.songs) }
         var currentSong by remember { mutableStateOf(Mock.songs[1]) }
         var isPlaying by remember { mutableStateOf(true) }
-        var isLiked by remember { mutableStateOf(Mock.songs[1].id == 1) }
+        var isLiked by remember { mutableStateOf(false) }
         var showPlayer by remember { mutableStateOf(false) }
+
+        LaunchedEffect(audioLibrary) {
+            val library = audioLibrary ?: return@LaunchedEffect
+            runCatching { library.loadSongs() }.onSuccess { loaded ->
+                if (loaded.isNotEmpty()) songs = loaded
+            }
+        }
 
         if (!permissionGranted) {
             PermissionScreen(onRequestPermission = onRequestPermission)
@@ -122,13 +134,14 @@ fun App(
             ) { padding ->
                 Box(modifier = Modifier.fillMaxSize().padding(padding)) {
                     when (selectedTab) {
-                        0 -> HomeScreen(
-                            onPlay = { song ->
-                                currentSong = song
-                                isPlaying = true
-                                showPlayer = true
-                            },
-                        )
+                    0 -> HomeScreen(
+                        songs = songs,
+                        onPlay = { song ->
+                            currentSong = song
+                            isPlaying = true
+                            showPlayer = true
+                        },
+                    )
                         1 -> SearchScreen()
                         else -> LibraryScreen()
                     }

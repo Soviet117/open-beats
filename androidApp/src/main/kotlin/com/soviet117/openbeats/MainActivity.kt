@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
+import com.soviet117.openbeats.audio.MediaStoreAudioLibrary
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -24,6 +25,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var permissionGranted by remember { mutableStateOf(hasAudioPermission(this)) }
+            val library = remember { MediaStoreAudioLibrary(applicationContext) }
             val launcher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestPermission(),
             ) { granted ->
@@ -34,6 +36,7 @@ class MainActivity : ComponentActivity() {
                 onRequestPermission = {
                     launcher.launch(audioPermissionName())
                 },
+                audioLibrary = library,
             )
         }
     }
