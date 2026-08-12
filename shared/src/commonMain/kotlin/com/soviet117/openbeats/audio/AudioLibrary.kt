@@ -4,4 +4,5 @@ import com.soviet117.openbeats.ui.data.Song
 
 interface AudioLibrary {
     suspend fun loadSongs(): List<Song>
+    suspend fun loadArtwork(songId: String): ByteArray?
 }

@@ -23,6 +23,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,6 +36,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.soviet117.openbeats.audio.AudioLibrary
+import com.soviet117.openbeats.audio.LocalAudioLibrary
 import com.soviet117.openbeats.audio.MockPlayerController
 import com.soviet117.openbeats.audio.PlayerController
 import com.soviet117.openbeats.audio.PlayerState
@@ -74,15 +76,18 @@ fun App(
 ) {
     OpenBeatsTheme {
         var selectedTab by remember { mutableIntStateOf(0) }
-        var songs by remember { mutableStateOf(Mock.songs) }
+        val hasLibrary = audioLibrary != null
+        var songs by remember { mutableStateOf(if (hasLibrary) emptyList() else Mock.songs) }
+        var loading by remember { mutableStateOf(hasLibrary) }
         var isLiked by remember { mutableStateOf(false) }
         var showPlayer by remember { mutableStateOf(false) }
 
         LaunchedEffect(audioLibrary) {
             val library = audioLibrary ?: return@LaunchedEffect
-            runCatching { library.loadSongs() }.onSuccess { loaded ->
-                if (loaded.isNotEmpty()) songs = loaded
-            }
+            runCatching { library.loadSongs() }
+                .onSuccess { loaded -> if (loaded.isNotEmpty()) songs = loaded }
+                .onFailure { songs = Mock.songs }
+            loading = false
         }
 
         val controller = playerController ?: remember {
@@ -98,93 +103,95 @@ fun App(
         val playerState by controller.state.collectAsState()
         val currentSong = playerState.currentSong
 
-        if (!permissionGranted) {
-            PermissionScreen(onRequestPermission = onRequestPermission)
-            return@OpenBeatsTheme
-        }
-
-        Box(modifier = Modifier.fillMaxSize()) {
-            Scaffold(
-                containerColor = Obsidian,
-                bottomBar = {
-                    AnimatedVisibility(
-                        visible = !showPlayer,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                    ) {
-                        Column {
-                            if (currentSong != null) {
-                                MiniPlayer(
-                                    song = currentSong,
-                                    playing = playerState.isPlaying,
-                                    onTap = { showPlayer = true },
-                                    onTogglePlay = { controller.playPause() },
-                                )
-                            }
-                            NavigationBar(
-                                containerColor = Obsidian,
-                                tonalElevation = 0.dp,
+        CompositionLocalProvider(LocalAudioLibrary provides audioLibrary) {
+            if (!permissionGranted) {
+                PermissionScreen(onRequestPermission = onRequestPermission)
+            } else {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Scaffold(
+                        containerColor = Obsidian,
+                        bottomBar = {
+                            AnimatedVisibility(
+                                visible = !showPlayer,
+                                enter = fadeIn(),
+                                exit = fadeOut(),
                             ) {
-                                Tabs.forEachIndexed { index, tab ->
-                                    NavigationBarItem(
-                                        selected = selectedTab == index,
-                                        onClick = { selectedTab = index },
-                                        icon = {
-                                            Icon(
-                                                imageVector = if (selectedTab == index) tab.selected else tab.unselected,
-                                                contentDescription = null,
+                                Column {
+                                    if (currentSong != null) {
+                                        MiniPlayer(
+                                            song = currentSong,
+                                            playing = playerState.isPlaying,
+                                            onTap = { showPlayer = true },
+                                            onTogglePlay = { controller.playPause() },
+                                        )
+                                    }
+                                    NavigationBar(
+                                        containerColor = Obsidian,
+                                        tonalElevation = 0.dp,
+                                    ) {
+                                        Tabs.forEachIndexed { index, tab ->
+                                            NavigationBarItem(
+                                                selected = selectedTab == index,
+                                                onClick = { selectedTab = index },
+                                                icon = {
+                                                    Icon(
+                                                        imageVector = if (selectedTab == index) tab.selected else tab.unselected,
+                                                        contentDescription = null,
+                                                    )
+                                                },
+                                                label = { Text(tab.label) },
+                                                colors = NavigationBarItemDefaults.colors(
+                                                    selectedIconColor = TextPrimary,
+                                                    selectedTextColor = TextPrimary,
+                                                    unselectedIconColor = TextMuted,
+                                                    unselectedTextColor = TextMuted,
+                                                    indicatorColor = BrandSoft.copy(alpha = 0.16f),
+                                                ),
                                             )
-                                        },
-                                        label = { Text(tab.label) },
-                                        colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = TextPrimary,
-                                            selectedTextColor = TextPrimary,
-                                            unselectedIconColor = TextMuted,
-                                            unselectedTextColor = TextMuted,
-                                            indicatorColor = BrandSoft.copy(alpha = 0.16f),
-                                        ),
-                                    )
+                                        }
+                                    }
                                 }
+                            }
+                        },
+                    ) { padding ->
+                        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+                            when (selectedTab) {
+                                0 -> HomeScreen(
+                                    songs = songs,
+                                    loading = loading,
+                                    onPlay = { song ->
+                                        val index = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                                        controller.setQueue(songs, index)
+                                        showPlayer = true
+                                    },
+                                )
+                                1 -> SearchScreen()
+                                else -> LibraryScreen()
                             }
                         }
                     }
-                },
-            ) { padding ->
-                Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-                    when (selectedTab) {
-                        0 -> HomeScreen(
-                            songs = songs,
-                            onPlay = { song ->
-                                val index = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-                                controller.setQueue(songs, index)
-                                showPlayer = true
-                            },
-                        )
-                        1 -> SearchScreen()
-                        else -> LibraryScreen()
-                    }
-                }
-            }
 
-            if (currentSong != null) {
-                AnimatedVisibility(
-                    visible = showPlayer,
-                    enter = fadeIn() + slideInVertically { it },
-                    exit = fadeOut() + slideOutVertically { it },
-                ) {
-                    NowPlayingScreen(
-                        song = currentSong,
-                        playing = playerState.isPlaying,
-                        isLiked = isLiked,
-                        positionMs = playerState.positionMs,
-                        durationMs = playerState.durationMs.takeIf { it > 0 } ?: currentSong.durationMs,
-                        onClose = { showPlayer = false },
-                        onTogglePlay = { controller.playPause() },
-                        onToggleLike = { isLiked = !isLiked },
-                        onNext = { controller.next() },
-                        onPrevious = { controller.previous() },
-                        onSeek = { controller.seekTo(it) },
-                    )
+                    if (currentSong != null) {
+                        AnimatedVisibility(
+                            visible = showPlayer,
+                            enter = fadeIn() + slideInVertically { it },
+                            exit = fadeOut() + slideOutVertically { it },
+                        ) {
+                            NowPlayingScreen(
+                                song = currentSong,
+                                playing = playerState.isPlaying,
+                                isLiked = isLiked,
+                                positionMs = playerState.positionMs,
+                                durationMs = playerState.durationMs.takeIf { it > 0 } ?: currentSong.durationMs,
+                                onClose = { showPlayer = false },
+                                onTogglePlay = { controller.playPause() },
+                                onToggleLike = { isLiked = !isLiked },
+                                onNext = { controller.next() },
+                                onPrevious = { controller.previous() },
+                                onSeek = { controller.seekTo(it) },
+                            )
+                        }
+                    }
                 }
             }
         }

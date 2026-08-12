@@ -7,9 +7,17 @@ import android.provider.MediaStore
 import androidx.compose.ui.graphics.Color
 import com.soviet117.openbeats.ui.data.Song
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
 class MediaStoreAudioLibrary(private val context: Context) : AudioLibrary {
+
+    private val albumIds = ConcurrentHashMap<String, Long>()
+    private val artworkCache = mutableMapOf<String, ByteArray?>()
+    private val artworkMutex = Mutex()
+    private val albumArtCache = mutableMapOf<Long, ByteArray?>()
 
     override suspend fun loadSongs(): List<Song> = withContext(Dispatchers.IO) {
         val songs = mutableListOf<Song>()
@@ -36,13 +44,14 @@ class MediaStoreAudioLibrary(private val context: Context) : AudioLibrary {
                 val id = cursor.getLong(idCol)
                 val durationMs = cursor.getLong(durationCol)
                 if (durationMs < 30_000) continue
+                val songId = ContentUris.withAppendedId(collection, id).toString()
+                albumIds[songId] = cursor.getLong(albumIdCol)
                 songs += Song(
-                    id = ContentUris.withAppendedId(collection, id).toString(),
+                    id = songId,
                     title = cursor.getString(titleCol) ?: "Sin título",
                     artist = cursor.getString(artistCol) ?: "Artista desconocido",
                     album = cursor.getString(albumCol) ?: "Álbum desconocido",
                     durationMs = durationMs,
-                    artwork = loadAlbumArt(cursor.getLong(albumIdCol)),
                     colors = palette[index % palette.size],
                 )
                 index++
@@ -51,14 +60,32 @@ class MediaStoreAudioLibrary(private val context: Context) : AudioLibrary {
         songs
     }
 
+    override suspend fun loadArtwork(songId: String): ByteArray? {
+        val albumId = albumIds[songId] ?: return null
+        artworkMutex.withLock {
+            if (artworkCache.containsKey(songId)) return artworkCache[songId]
+        }
+        val bytes = withContext(Dispatchers.IO) { loadAlbumArt(albumId) }
+        artworkMutex.withLock {
+            if (!artworkCache.containsKey(songId)) artworkCache[songId] = bytes
+        }
+        return bytes
+    }
+
     private fun loadAlbumArt(albumId: Long): ByteArray? {
-        if (albumId < 0) return null
-        return try {
+        synchronized(albumArtCache) {
+            if (albumArtCache.containsKey(albumId)) return albumArtCache[albumId]
+        }
+        val bytes = try {
             val artUri = Uri.parse("content://media/external/audio/albumart/$albumId")
             context.contentResolver.openInputStream(artUri)?.use { it.readBytes() }
         } catch (_: Exception) {
             null
         }
+        synchronized(albumArtCache) {
+            if (!albumArtCache.containsKey(albumId)) albumArtCache[albumId] = bytes
+        }
+        return bytes
     }
 
     private val palette = listOf(

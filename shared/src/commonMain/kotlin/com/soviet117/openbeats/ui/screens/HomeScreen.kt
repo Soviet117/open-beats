@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,6 +37,7 @@ import com.soviet117.openbeats.ui.components.SongRow
 import com.soviet117.openbeats.ui.data.Mock
 import com.soviet117.openbeats.ui.data.Song
 import com.soviet117.openbeats.ui.theme.BrandGradient
+import com.soviet117.openbeats.ui.theme.BrandViolet
 import com.soviet117.openbeats.ui.theme.TextPrimary
 import com.soviet117.openbeats.ui.theme.TextSecondary
 
@@ -42,6 +45,7 @@ import com.soviet117.openbeats.ui.theme.TextSecondary
 fun HomeScreen(
     songs: List<Song>,
     onPlay: (Song) -> Unit,
+    loading: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -90,6 +94,20 @@ fun HomeScreen(
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
             Spacer(Modifier.height(20.dp))
+        }
+        if (loading) {
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        color = BrandViolet,
+                        modifier = Modifier.size(32.dp),
+                    )
+                }
+            }
+            return@LazyColumn
         }
         item {
             Column(
