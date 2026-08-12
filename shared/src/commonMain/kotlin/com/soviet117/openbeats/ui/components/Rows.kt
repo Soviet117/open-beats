@@ -1,7 +1,11 @@
 package com.soviet117.openbeats.ui.components
 
+import androidx.compose.foundation.Indication
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,10 +18,10 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -41,10 +45,16 @@ fun SongRow(
     onClick: () -> Unit = {},
     onToggleLike: () -> Unit = {},
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val noIndication: Indication? = null
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = noIndication,
+                onClick = onClick,
+            )
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -63,6 +73,7 @@ fun SongRow(
             modifier = Modifier.size(52.dp),
             corner = 10.dp,
             noteSize = 20.dp,
+            solid = true,
         )
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -82,7 +93,16 @@ fun SongRow(
             )
         }
         Spacer(Modifier.width(8.dp))
-        IconButton(onClick = onToggleLike) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = noIndication,
+                    onClick = onToggleLike,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(
                 imageVector = if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                 contentDescription = null,

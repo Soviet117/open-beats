@@ -184,7 +184,7 @@ fun HomeScreen(
             item {
                 Spacer(Modifier.height(4.dp))
             }
-            itemsIndexed(favorites) { index, song ->
+            itemsIndexed(favorites, key = { _, song -> "fav-${song.id}" }) { index, song ->
                 SongRow(
                     song = song,
                     index = index + 1,
@@ -207,7 +207,7 @@ fun HomeScreen(
         item {
             Spacer(Modifier.height(4.dp))
         }
-        itemsIndexed(songs) { index, song ->
+        itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
             SongRow(
                 song = song,
                 index = index + 1,

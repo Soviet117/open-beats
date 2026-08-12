@@ -42,6 +42,7 @@ import com.soviet117.openbeats.audio.PlayerController
 import com.soviet117.openbeats.audio.PlayerState
 import com.soviet117.openbeats.data.FavoritesStore
 import com.soviet117.openbeats.ui.components.MiniPlayer
+import com.soviet117.openbeats.ui.components.ArtworkCache
 import com.soviet117.openbeats.ui.data.Mock
 import com.soviet117.openbeats.ui.data.Song
 import com.soviet117.openbeats.ui.screens.HomeScreen
@@ -87,9 +88,14 @@ fun App(
 
         LaunchedEffect(audioLibrary) {
             val library = audioLibrary ?: return@LaunchedEffect
-            runCatching { library.loadSongs() }
-                .onSuccess { loaded -> if (loaded.isNotEmpty()) songs = loaded }
-                .onFailure { songs = Mock.songs }
+            val loaded = runCatching { library.loadSongs() }
+                .getOrElse { emptyList() }
+            if (loaded.isNotEmpty()) {
+                songs = loaded
+                ArtworkCache.preload(loaded, library)
+            } else {
+                songs = Mock.songs
+            }
             loading = false
         }
 
@@ -105,8 +111,8 @@ fun App(
             runCatching { store.save(likedIds) }
         }
 
-        val toggleLike: (String) -> Unit = { songId ->
-            likedIds = if (songId in likedIds) likedIds - songId else likedIds + songId
+        val toggleLike: (String) -> Unit = remember {
+            { songId -> likedIds = if (songId in likedIds) likedIds - songId else likedIds + songId }
         }
 
         val controller = playerController ?: remember {
@@ -121,6 +127,22 @@ fun App(
         }
         val playerState by controller.state.collectAsState()
         val currentSong = playerState.currentSong
+
+        val onPlay: (List<Song>, Int) -> Unit = remember {
+            { queue, index ->
+                controller.setQueue(queue, index)
+                showPlayer = true
+            }
+        }
+        val onSelectTab: (Int) -> Unit = remember { { index -> selectedTab = index } }
+        val onOpenPlayer: () -> Unit = remember { { showPlayer = true } }
+        val onClosePlayer: () -> Unit = remember { { showPlayer = false } }
+        val onTogglePlay: () -> Unit = remember { { controller.playPause() } }
+        val onNext: () -> Unit = remember { { controller.next() } }
+        val onPrevious: () -> Unit = remember { { controller.previous() } }
+        val onSeek: (Long) -> Unit = remember { { position -> controller.seekTo(position) } }
+        val onToggleShuffle: () -> Unit = remember { { controller.toggleShuffle() } }
+        val onCycleRepeat: () -> Unit = remember { { controller.cycleRepeat() } }
 
         CompositionLocalProvider(LocalAudioLibrary provides audioLibrary) {
             if (!permissionGranted) {
@@ -140,9 +162,9 @@ fun App(
                                         MiniPlayer(
                                             song = currentSong,
                                             playing = playerState.isPlaying,
-                                            onTap = { showPlayer = true },
-                                            onTogglePlay = { controller.playPause() },
-                                            onNext = { controller.next() },
+                                            onTap = onOpenPlayer,
+                                            onTogglePlay = onTogglePlay,
+                                            onNext = onNext,
                                         )
                                     }
                                     NavigationBar(
@@ -152,7 +174,7 @@ fun App(
                                         Tabs.forEachIndexed { index, tab ->
                                             NavigationBarItem(
                                                 selected = selectedTab == index,
-                                                onClick = { selectedTab = index },
+                                                onClick = { onSelectTab(index) },
                                                 icon = {
                                                     Icon(
                                                         imageVector = if (selectedTab == index) tab.selected else tab.unselected,
@@ -180,10 +202,7 @@ fun App(
                                     songs = songs,
                                     likedIds = likedIds,
                                     loading = loading,
-                                    onPlay = { queue, index ->
-                                        controller.setQueue(queue, index)
-                                        showPlayer = true
-                                    },
+                                    onPlay = onPlay,
                                     onToggleLike = toggleLike,
                                 )
                                 1 -> SearchScreen()
@@ -206,14 +225,14 @@ fun App(
                                 durationMs = playerState.durationMs.takeIf { it > 0 } ?: currentSong.durationMs,
                                 shuffle = playerState.shuffle,
                                 repeatMode = playerState.repeatMode,
-                                onClose = { showPlayer = false },
-                                onTogglePlay = { controller.playPause() },
+                                onClose = onClosePlayer,
+                                onTogglePlay = onTogglePlay,
                                 onToggleLike = { toggleLike(currentSong.id) },
-                                onNext = { controller.next() },
-                                onPrevious = { controller.previous() },
-                                onSeek = { controller.seekTo(it) },
-                                onToggleShuffle = { controller.toggleShuffle() },
-                                onCycleRepeat = { controller.cycleRepeat() },
+                                onNext = onNext,
+                                onPrevious = onPrevious,
+                                onSeek = onSeek,
+                                onToggleShuffle = onToggleShuffle,
+                                onCycleRepeat = onCycleRepeat,
                             )
                         }
                     }
