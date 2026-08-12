@@ -40,6 +40,7 @@ import com.soviet117.openbeats.audio.LocalAudioLibrary
 import com.soviet117.openbeats.audio.MockPlayerController
 import com.soviet117.openbeats.audio.PlayerController
 import com.soviet117.openbeats.audio.PlayerState
+import com.soviet117.openbeats.data.FavoritesStore
 import com.soviet117.openbeats.ui.components.MiniPlayer
 import com.soviet117.openbeats.ui.data.Mock
 import com.soviet117.openbeats.ui.data.Song
@@ -73,13 +74,15 @@ fun App(
     onRequestPermission: () -> Unit = {},
     audioLibrary: AudioLibrary? = null,
     playerController: PlayerController? = null,
+    favoritesStore: FavoritesStore? = null,
 ) {
     OpenBeatsTheme {
         var selectedTab by remember { mutableIntStateOf(0) }
         val hasLibrary = audioLibrary != null
         var songs by remember { mutableStateOf(if (hasLibrary) emptyList() else Mock.songs) }
         var loading by remember { mutableStateOf(hasLibrary) }
-        var isLiked by remember { mutableStateOf(false) }
+        var likedIds by remember { mutableStateOf(emptySet<String>()) }
+        var likesLoaded by remember { mutableStateOf(false) }
         var showPlayer by remember { mutableStateOf(false) }
 
         LaunchedEffect(audioLibrary) {
@@ -88,6 +91,22 @@ fun App(
                 .onSuccess { loaded -> if (loaded.isNotEmpty()) songs = loaded }
                 .onFailure { songs = Mock.songs }
             loading = false
+        }
+
+        LaunchedEffect(favoritesStore) {
+            val store = favoritesStore ?: return@LaunchedEffect
+            likedIds = runCatching { store.load() }.getOrDefault(emptySet())
+            likesLoaded = true
+        }
+
+        LaunchedEffect(likedIds, likesLoaded, favoritesStore) {
+            val store = favoritesStore ?: return@LaunchedEffect
+            if (!likesLoaded) return@LaunchedEffect
+            runCatching { store.save(likedIds) }
+        }
+
+        val toggleLike: (String) -> Unit = { songId ->
+            likedIds = if (songId in likedIds) likedIds - songId else likedIds + songId
         }
 
         val controller = playerController ?: remember {
@@ -158,11 +177,13 @@ fun App(
                             when (selectedTab) {
                                 0 -> HomeScreen(
                                     songs = songs,
+                                    likedIds = likedIds,
                                     loading = loading,
                                     onPlay = { queue, index ->
                                         controller.setQueue(queue, index)
                                         showPlayer = true
                                     },
+                                    onToggleLike = toggleLike,
                                 )
                                 1 -> SearchScreen()
                                 else -> LibraryScreen()
@@ -179,12 +200,12 @@ fun App(
                             NowPlayingScreen(
                                 song = currentSong,
                                 playing = playerState.isPlaying,
-                                isLiked = isLiked,
+                                isLiked = currentSong.id in likedIds,
                                 positionMs = playerState.positionMs,
                                 durationMs = playerState.durationMs.takeIf { it > 0 } ?: currentSong.durationMs,
                                 onClose = { showPlayer = false },
                                 onTogglePlay = { controller.playPause() },
-                                onToggleLike = { isLiked = !isLiked },
+                                onToggleLike = { toggleLike(currentSong.id) },
                                 onNext = { controller.next() },
                                 onPrevious = { controller.previous() },
                                 onSeek = { controller.seekTo(it) },

@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +27,7 @@ import com.soviet117.openbeats.ui.data.Artist
 import com.soviet117.openbeats.ui.data.Playlist
 import com.soviet117.openbeats.ui.data.Song
 import com.soviet117.openbeats.ui.data.formatDuration
+import com.soviet117.openbeats.ui.theme.BrandViolet
 import com.soviet117.openbeats.ui.theme.TextMuted
 import com.soviet117.openbeats.ui.theme.TextPrimary
 import com.soviet117.openbeats.ui.theme.TextSecondary
@@ -34,7 +37,9 @@ fun SongRow(
     song: Song,
     modifier: Modifier = Modifier,
     index: Int? = null,
+    isLiked: Boolean = false,
     onClick: () -> Unit = {},
+    onToggleLike: () -> Unit = {},
 ) {
     Row(
         modifier = modifier
@@ -77,13 +82,15 @@ fun SongRow(
             )
         }
         Spacer(Modifier.width(8.dp))
-        Icon(
-            imageVector = Icons.Rounded.FavoriteBorder,
-            contentDescription = null,
-            tint = TextMuted,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(Modifier.width(12.dp))
+        IconButton(onClick = onToggleLike) {
+            Icon(
+                imageVector = if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                contentDescription = null,
+                tint = if (isLiked) BrandViolet else TextMuted,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Spacer(Modifier.width(4.dp))
         Text(
             text = formatDuration(song.durationMs),
             style = MaterialTheme.typography.bodySmall,

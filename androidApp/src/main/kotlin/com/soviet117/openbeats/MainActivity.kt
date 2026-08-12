@@ -19,6 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import com.soviet117.openbeats.audio.AndroidPlayerController
 import com.soviet117.openbeats.audio.MediaStoreAudioLibrary
+import com.soviet117.openbeats.data.SharedPreferencesFavoritesStore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
             var permissionGranted by remember { mutableStateOf(hasAudioPermission(this)) }
             val library = remember { MediaStoreAudioLibrary(applicationContext) }
             val player = remember { AndroidPlayerController(applicationContext) }
+            val favoritesStore = remember { SharedPreferencesFavoritesStore(applicationContext) }
             DisposableEffect(player) {
                 onDispose { player.release() }
             }
@@ -44,6 +46,7 @@ class MainActivity : ComponentActivity() {
                 },
                 audioLibrary = library,
                 playerController = player,
+                favoritesStore = favoritesStore,
             )
         }
     }

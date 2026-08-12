@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.soviet117.openbeats.ui.components.PlaylistCard
 import com.soviet117.openbeats.ui.components.RecentTile
 import com.soviet117.openbeats.ui.components.SectionHeader
 import com.soviet117.openbeats.ui.components.SongRow
@@ -69,13 +66,15 @@ private fun deriveAlbums(songs: List<Song>): List<Album> {
 @Composable
 fun HomeScreen(
     songs: List<Song>,
+    likedIds: Set<String>,
     onPlay: (List<Song>, Int) -> Unit,
+    onToggleLike: (String) -> Unit,
     loading: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val albums = remember(songs) { deriveAlbums(songs) }
     val recent = albums.take(4)
-    val madeForYou = albums.drop(4).take(6)
+    val favorites = remember(songs, likedIds) { songs.filter { it.id in likedIds } }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -178,32 +177,32 @@ fun HomeScreen(
         item {
             Spacer(Modifier.height(28.dp))
         }
-        if (madeForYou.isNotEmpty()) {
+        if (favorites.isNotEmpty()) {
             item {
-                SectionHeader(title = "Hecho para ti", action = "Ver todo")
+                SectionHeader(title = "Tus favoritas")
             }
             item {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(4.dp))
             }
-            item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    items(madeForYou) { album ->
-                        PlaylistCard(
-                            playlist = album.playlist,
-                            onClick = { onPlay(album.songs, 0) },
-                        )
-                    }
-                }
+            itemsIndexed(favorites) { index, song ->
+                SongRow(
+                    song = song,
+                    index = index + 1,
+                    isLiked = true,
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    onClick = {
+                        val queueIndex = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                        onPlay(songs, queueIndex)
+                    },
+                    onToggleLike = { onToggleLike(song.id) },
+                )
             }
             item {
                 Spacer(Modifier.height(28.dp))
             }
         }
         item {
-            SectionHeader(title = "Lo más escuchado", action = "Ver todo")
+            SectionHeader(title = "Tus músicas")
         }
         item {
             Spacer(Modifier.height(4.dp))
@@ -212,8 +211,10 @@ fun HomeScreen(
             SongRow(
                 song = song,
                 index = index + 1,
+                isLiked = song.id in likedIds,
                 modifier = Modifier.padding(horizontal = 20.dp),
                 onClick = { onPlay(songs, index) },
+                onToggleLike = { onToggleLike(song.id) },
             )
         }
     }
