@@ -159,9 +159,8 @@ fun App(
                                 0 -> HomeScreen(
                                     songs = songs,
                                     loading = loading,
-                                    onPlay = { song ->
-                                        val index = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-                                        controller.setQueue(songs, index)
+                                    onPlay = { queue, index ->
+                                        controller.setQueue(queue, index)
                                         showPlayer = true
                                     },
                                 )

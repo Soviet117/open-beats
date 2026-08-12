@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,20 +35,48 @@ import com.soviet117.openbeats.ui.components.PlaylistCard
 import com.soviet117.openbeats.ui.components.RecentTile
 import com.soviet117.openbeats.ui.components.SectionHeader
 import com.soviet117.openbeats.ui.components.SongRow
-import com.soviet117.openbeats.ui.data.Mock
+import com.soviet117.openbeats.ui.data.Playlist
 import com.soviet117.openbeats.ui.data.Song
 import com.soviet117.openbeats.ui.theme.BrandGradient
 import com.soviet117.openbeats.ui.theme.BrandViolet
 import com.soviet117.openbeats.ui.theme.TextPrimary
 import com.soviet117.openbeats.ui.theme.TextSecondary
 
+private data class Album(
+    val playlist: Playlist,
+    val songs: List<Song>,
+)
+
+private fun deriveAlbums(songs: List<Song>): List<Album> {
+    val grouped = LinkedHashMap<String, MutableList<Song>>()
+    for (song in songs) {
+        grouped.getOrPut(song.album) { mutableListOf() }.add(song)
+    }
+    return grouped.map { (name, albumSongs) ->
+        Album(
+            playlist = Playlist(
+                id = name.hashCode(),
+                name = name,
+                subtitle = "Álbum",
+                songCount = albumSongs.size,
+                colors = albumSongs.first().colors,
+            ),
+            songs = albumSongs,
+        )
+    }
+}
+
 @Composable
 fun HomeScreen(
     songs: List<Song>,
-    onPlay: (Song) -> Unit,
+    onPlay: (List<Song>, Int) -> Unit,
     loading: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    val albums = remember(songs) { deriveAlbums(songs) }
+    val recent = albums.take(4)
+    val madeForYou = albums.drop(4).take(6)
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 16.dp),
@@ -109,22 +138,38 @@ fun HomeScreen(
             }
             return@LazyColumn
         }
-        item {
-            Column(
-                modifier = Modifier.padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Mock.recentTiles.chunked(2).forEach { rowItems ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        rowItems.forEach { playlist ->
-                            RecentTile(
-                                playlist = playlist,
-                                modifier = Modifier.weight(1f),
-                                onClick = { if (songs.isNotEmpty()) onPlay(songs.first()) },
-                            )
-                        }
-                        if (rowItems.size == 1) {
-                            Spacer(Modifier.weight(1f))
+        if (songs.isEmpty()) {
+            item {
+                Text(
+                    text = "Aún no hay canciones en tu dispositivo",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
+            return@LazyColumn
+        }
+        if (recent.isNotEmpty()) {
+            item {
+                Column(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    recent.chunked(2).forEach { rowItems ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            rowItems.forEach { album ->
+                                RecentTile(
+                                    playlist = album.playlist,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onPlay(album.songs, 0) },
+                                )
+                            }
+                            if (rowItems.size == 1) {
+                                Spacer(Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -133,24 +178,29 @@ fun HomeScreen(
         item {
             Spacer(Modifier.height(28.dp))
         }
-        item {
-            SectionHeader(title = "Hecho para ti", action = "Ver todo")
-        }
-        item {
-            Spacer(Modifier.height(12.dp))
-        }
-        item {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                items(Mock.playlists.take(6)) { playlist ->
-                    PlaylistCard(playlist = playlist)
+        if (madeForYou.isNotEmpty()) {
+            item {
+                SectionHeader(title = "Hecho para ti", action = "Ver todo")
+            }
+            item {
+                Spacer(Modifier.height(12.dp))
+            }
+            item {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    items(madeForYou) { album ->
+                        PlaylistCard(
+                            playlist = album.playlist,
+                            onClick = { onPlay(album.songs, 0) },
+                        )
+                    }
                 }
             }
-        }
-        item {
-            Spacer(Modifier.height(28.dp))
+            item {
+                Spacer(Modifier.height(28.dp))
+            }
         }
         item {
             SectionHeader(title = "Lo más escuchado", action = "Ver todo")
@@ -163,7 +213,7 @@ fun HomeScreen(
                 song = song,
                 index = index + 1,
                 modifier = Modifier.padding(horizontal = 20.dp),
-                onClick = { onPlay(song) },
+                onClick = { onPlay(songs, index) },
             )
         }
     }
