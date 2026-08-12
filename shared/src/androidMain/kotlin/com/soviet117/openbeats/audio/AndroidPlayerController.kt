@@ -95,4 +95,9 @@ class AndroidPlayerController(context: Context) : PlayerController {
     private fun update(transform: (PlayerState) -> PlayerState) {
         _state.value = transform(_state.value)
     }
+
+    fun release() {
+        tickerJob?.cancel()
+        player.release()
+    }
 }

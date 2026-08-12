@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +29,9 @@ class MainActivity : ComponentActivity() {
             var permissionGranted by remember { mutableStateOf(hasAudioPermission(this)) }
             val library = remember { MediaStoreAudioLibrary(applicationContext) }
             val player = remember { AndroidPlayerController(applicationContext) }
+            DisposableEffect(player) {
+                onDispose { player.release() }
+            }
             val launcher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestPermission(),
             ) { granted ->
