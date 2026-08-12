@@ -52,7 +52,9 @@ class AndroidPlayerController(context: Context) : PlayerController {
         val items = songs.map { MediaItem.fromUri(it.id) }
         player.setMediaItems(items, startIndex.coerceIn(0, songs.size - 1), 0L)
         player.prepare()
+        applyShuffleAndRepeat()
         player.play()
+        val previousState = _state.value
         update {
             PlayerState(
                 queue = songs,
@@ -60,6 +62,8 @@ class AndroidPlayerController(context: Context) : PlayerController {
                 isPlaying = true,
                 positionMs = 0L,
                 durationMs = songs.getOrNull(startIndex)?.durationMs ?: 0L,
+                shuffle = previousState.shuffle,
+                repeatMode = previousState.repeatMode,
             )
         }
     }
@@ -79,6 +83,35 @@ class AndroidPlayerController(context: Context) : PlayerController {
     override fun seekTo(positionMs: Long) {
         player.seekTo(positionMs.coerceIn(0L, player.duration.coerceAtLeast(0L)))
         update { it.copy(positionMs = positionMs.coerceAtLeast(0L)) }
+    }
+
+    override fun toggleShuffle() {
+        val next = !_state.value.shuffle
+        player.shuffleModeEnabled = next
+        update { it.copy(shuffle = next) }
+    }
+
+    override fun cycleRepeat() {
+        val next = when (_state.value.repeatMode) {
+            RepeatMode.OFF -> RepeatMode.ALL
+            RepeatMode.ALL -> RepeatMode.ONE
+            RepeatMode.ONE -> RepeatMode.OFF
+        }
+        player.repeatMode = when (next) {
+            RepeatMode.OFF -> Player.REPEAT_MODE_OFF
+            RepeatMode.ALL -> Player.REPEAT_MODE_ALL
+            RepeatMode.ONE -> Player.REPEAT_MODE_ONE
+        }
+        update { it.copy(repeatMode = next) }
+    }
+
+    private fun applyShuffleAndRepeat() {
+        player.shuffleModeEnabled = _state.value.shuffle
+        player.repeatMode = when (_state.value.repeatMode) {
+            RepeatMode.OFF -> Player.REPEAT_MODE_OFF
+            RepeatMode.ALL -> Player.REPEAT_MODE_ALL
+            RepeatMode.ONE -> Player.REPEAT_MODE_ONE
+        }
     }
 
     private fun runTicker(isPlaying: Boolean) {

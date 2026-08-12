@@ -142,6 +142,7 @@ fun App(
                                             playing = playerState.isPlaying,
                                             onTap = { showPlayer = true },
                                             onTogglePlay = { controller.playPause() },
+                                            onNext = { controller.next() },
                                         )
                                     }
                                     NavigationBar(
@@ -203,12 +204,16 @@ fun App(
                                 isLiked = currentSong.id in likedIds,
                                 positionMs = playerState.positionMs,
                                 durationMs = playerState.durationMs.takeIf { it > 0 } ?: currentSong.durationMs,
+                                shuffle = playerState.shuffle,
+                                repeatMode = playerState.repeatMode,
                                 onClose = { showPlayer = false },
                                 onTogglePlay = { controller.playPause() },
                                 onToggleLike = { toggleLike(currentSong.id) },
                                 onNext = { controller.next() },
                                 onPrevious = { controller.previous() },
                                 onSeek = { controller.seekTo(it) },
+                                onToggleShuffle = { controller.toggleShuffle() },
+                                onCycleRepeat = { controller.cycleRepeat() },
                             )
                         }
                     }

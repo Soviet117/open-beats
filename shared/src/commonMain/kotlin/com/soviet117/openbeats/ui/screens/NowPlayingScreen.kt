@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.soviet117.openbeats.audio.RepeatMode
 import com.soviet117.openbeats.ui.components.PlayButton
 import com.soviet117.openbeats.ui.components.SongArtwork
 import com.soviet117.openbeats.ui.data.Song
@@ -59,6 +61,8 @@ fun NowPlayingScreen(
     isLiked: Boolean,
     positionMs: Long = 0L,
     durationMs: Long = song.durationMs,
+    shuffle: Boolean = false,
+    repeatMode: RepeatMode = RepeatMode.OFF,
     modifier: Modifier = Modifier,
     onClose: () -> Unit = {},
     onTogglePlay: () -> Unit = {},
@@ -66,6 +70,8 @@ fun NowPlayingScreen(
     onNext: () -> Unit = {},
     onPrevious: () -> Unit = {},
     onSeek: (Long) -> Unit = {},
+    onToggleShuffle: () -> Unit = {},
+    onCycleRepeat: () -> Unit = {},
 ) {
     val backdrop = Brush.verticalGradient(
         listOf(song.colors.first().copy(alpha = 0.55f), Obsidian, Obsidian),
@@ -177,12 +183,14 @@ fun NowPlayingScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Shuffle,
-                    contentDescription = null,
-                    tint = TextMuted,
-                    modifier = Modifier.size(22.dp),
-                )
+                IconButton(onClick = onToggleShuffle) {
+                    Icon(
+                        imageVector = Icons.Rounded.Shuffle,
+                        contentDescription = null,
+                        tint = if (shuffle) BrandViolet else TextMuted,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
                 IconButton(onClick = onPrevious) {
                     Icon(
                         imageVector = Icons.Rounded.SkipPrevious,
@@ -204,12 +212,14 @@ fun NowPlayingScreen(
                         modifier = Modifier.size(42.dp),
                     )
                 }
-                Icon(
-                    imageVector = Icons.Rounded.Repeat,
-                    contentDescription = null,
-                    tint = TextMuted,
-                    modifier = Modifier.size(22.dp),
-                )
+                IconButton(onClick = onCycleRepeat) {
+                    Icon(
+                        imageVector = if (repeatMode == RepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
+                        contentDescription = null,
+                        tint = if (repeatMode != RepeatMode.OFF) BrandViolet else TextMuted,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
             }
             Spacer(Modifier.weight(1f))
             Row(

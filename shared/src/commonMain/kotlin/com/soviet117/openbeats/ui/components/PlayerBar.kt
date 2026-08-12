@@ -43,6 +43,7 @@ fun MiniPlayer(
     modifier: Modifier = Modifier,
     onTap: () -> Unit = {},
     onTogglePlay: () -> Unit = {},
+    onNext: () -> Unit = {},
 ) {
     Surface(
         modifier = modifier
@@ -90,7 +91,7 @@ fun MiniPlayer(
                     tint = TextPrimary,
                 )
             }
-            IconButton(onClick = {}) {
+            IconButton(onClick = onNext) {
                 Icon(
                     imageVector = Icons.Rounded.SkipNext,
                     contentDescription = null,

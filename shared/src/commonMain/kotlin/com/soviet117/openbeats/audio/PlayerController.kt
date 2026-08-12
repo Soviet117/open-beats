@@ -11,10 +11,14 @@ data class PlayerState(
     val isPlaying: Boolean = false,
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
+    val shuffle: Boolean = false,
+    val repeatMode: RepeatMode = RepeatMode.OFF,
 ) {
     val currentSong: Song?
         get() = if (currentIndex in queue.indices) queue[currentIndex] else null
 }
+
+enum class RepeatMode { OFF, ALL, ONE }
 
 interface PlayerController {
     val state: StateFlow<PlayerState>
@@ -23,6 +27,8 @@ interface PlayerController {
     fun next()
     fun previous()
     fun seekTo(positionMs: Long)
+    fun toggleShuffle()
+    fun cycleRepeat()
 }
 
 class MockPlayerController(initial: PlayerState) : PlayerController {
@@ -36,6 +42,8 @@ class MockPlayerController(initial: PlayerState) : PlayerController {
             isPlaying = true,
             positionMs = 0L,
             durationMs = songs.getOrNull(startIndex)?.durationMs ?: 0L,
+            shuffle = _state.value.shuffle,
+            repeatMode = _state.value.repeatMode,
         )
     }
 
@@ -51,15 +59,48 @@ class MockPlayerController(initial: PlayerState) : PlayerController {
         _state.value = _state.value.copy(positionMs = positionMs)
     }
 
+    override fun toggleShuffle() {
+        _state.value = _state.value.copy(shuffle = !_state.value.shuffle)
+    }
+
+    override fun cycleRepeat() {
+        val next = when (_state.value.repeatMode) {
+            RepeatMode.OFF -> RepeatMode.ALL
+            RepeatMode.ALL -> RepeatMode.ONE
+            RepeatMode.ONE -> RepeatMode.OFF
+        }
+        _state.value = _state.value.copy(repeatMode = next)
+    }
+
     private fun move(step: Int) {
         val state = _state.value
-        val nextIndex = state.currentIndex + step
-        if (nextIndex in state.queue.indices) {
+        if (state.queue.isEmpty()) return
+        if (state.shuffle && state.queue.size > 1) {
+            val randomIndex = state.queue.indices.filter { it != state.currentIndex }.random()
             _state.value = state.copy(
+                currentIndex = randomIndex,
+                positionMs = 0L,
+                durationMs = state.queue[randomIndex].durationMs,
+            )
+            return
+        }
+        val nextIndex = state.currentIndex + step
+        when {
+            nextIndex in state.queue.indices -> _state.value = state.copy(
                 currentIndex = nextIndex,
                 positionMs = 0L,
                 durationMs = state.queue[nextIndex].durationMs,
             )
+            state.repeatMode == RepeatMode.ALL -> {
+                val wrapped = ((nextIndex % state.queue.size) + state.queue.size) % state.queue.size
+                _state.value = state.copy(
+                    currentIndex = wrapped,
+                    positionMs = 0L,
+                    durationMs = state.queue[wrapped].durationMs,
+                )
+            }
+            state.repeatMode == RepeatMode.ONE -> _state.value = state.copy(positionMs = 0L)
+            else -> _state.value = state.copy(isPlaying = false)
         }
     }
 }
