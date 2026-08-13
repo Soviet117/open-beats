@@ -76,6 +76,7 @@ fun App(
     audioLibrary: AudioLibrary? = null,
     playerController: PlayerController? = null,
     favoritesStore: FavoritesStore? = null,
+    appVersion: String? = null,
 ) {
     OpenBeatsTheme {
         var selectedTab by remember { mutableIntStateOf(0) }
@@ -202,6 +203,7 @@ fun App(
                                     songs = songs,
                                     likedIds = likedIds,
                                     loading = loading,
+                                    appVersion = appVersion,
                                     onPlay = onPlay,
                                     onToggleLike = toggleLike,
                                 )

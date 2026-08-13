@@ -43,6 +43,10 @@ class MainActivity : ComponentActivity() {
             val notificationLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestPermission(),
             ) { }
+            val appVersion = remember {
+                runCatching { packageManager.getPackageInfo(packageName, 0).versionName }
+                    .getOrNull()
+            }
             LaunchedEffect(permissionGranted) {
                 if (permissionGranted && needsNotificationPermission(applicationContext)) {
                     notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -56,6 +60,7 @@ class MainActivity : ComponentActivity() {
                 audioLibrary = library,
                 playerController = player,
                 favoritesStore = favoritesStore,
+                appVersion = appVersion,
             )
         }
     }
