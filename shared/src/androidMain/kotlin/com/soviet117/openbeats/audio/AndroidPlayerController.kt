@@ -1,11 +1,19 @@
 package com.soviet117.openbeats.audio
 
+import android.content.ComponentName
 import android.content.Context
-import androidx.media3.common.AudioAttributes
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import androidx.compose.ui.graphics.Color
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.FutureCallback
+import com.google.common.util.concurrent.Futures
 import com.soviet117.openbeats.ui.data.Song
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,90 +24,137 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.Executor
 
-class AndroidPlayerController(context: Context) : PlayerController {
+class AndroidPlayerController(
+    context: Context,
+    private val audioLibrary: AudioLibrary? = null,
+) : PlayerController {
 
+    private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val player: ExoPlayer = ExoPlayer.Builder(context)
-        .setAudioAttributes(
-            AudioAttributes.Builder()
-                .setUsage(C.USAGE_MEDIA)
-                .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                .build(),
-            /* handleAudioFocus = */ true,
-        )
-        .setHandleAudioBecomingNoisy(true)
-        .setWakeMode(C.WAKE_MODE_LOCAL)
-        .build()
+    private val mainExecutor = Executor { command -> Handler(Looper.getMainLooper()).post(command) }
+    private val sessionToken =
+        SessionToken(appContext, ComponentName(appContext, PlaybackService::class.java))
+
+    private var mediaController: MediaController? = null
+    private var connectInFlight = false
+    private var currentQueue: List<Song> = emptyList()
+    private var pendingQueue: Pair<List<Song>, Int>? = null
+    private var tickerJob: Job? = null
+    private var queueJob: Job? = null
 
     private val _state = MutableStateFlow(PlayerState())
     override val state = _state.asStateFlow()
 
-    private var tickerJob: Job? = null
-
-    init {
-        player.addListener(object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                update { it.copy(isPlaying = isPlaying, positionMs = player.currentPosition) }
-                runTicker(isPlaying)
+    private val sessionListener = object : MediaController.Listener {
+        override fun onDisconnected(controller: MediaController) {
+            if (mediaController === controller) {
+                mediaController = null
+                mainExecutor.execute { runCatching { controller.release() } }
             }
+        }
+    }
 
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                update { it.copy(durationMs = player.duration.coerceAtLeast(0L)) }
-            }
+    private val playerListener = object : Player.Listener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            update { it.copy(isPlaying = isPlaying) }
+            runTicker(isPlaying)
+        }
 
-            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            mediaController?.let { controller ->
                 update {
                     it.copy(
-                        currentIndex = player.currentMediaItemIndex,
+                        currentIndex = controller.currentMediaItemIndex,
                         positionMs = 0L,
-                        durationMs = player.duration.coerceAtLeast(0L),
+                        durationMs = controller.duration.coerceAtLeast(0L),
                     )
                 }
             }
-        })
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            mediaController?.let { controller ->
+                update { it.copy(durationMs = controller.duration.coerceAtLeast(0L)) }
+            }
+        }
+
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int,
+        ) {
+            update {
+                it.copy(
+                    currentIndex = mediaController?.currentMediaItemIndex ?: it.currentIndex,
+                    positionMs = newPosition.positionMs,
+                    durationMs = mediaController?.duration?.coerceAtLeast(0L) ?: it.durationMs,
+                )
+            }
+        }
+
+        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+            update { it.copy(shuffle = shuffleModeEnabled) }
+        }
+
+        override fun onRepeatModeChanged(repeatMode: Int) {
+            update { it.copy(repeatMode = repeatMode.toRepeatMode()) }
+        }
+    }
+
+    init {
+        connect()
     }
 
     override fun setQueue(songs: List<Song>, startIndex: Int) {
-        val items = songs.map { MediaItem.fromUri(it.id) }
-        player.setMediaItems(items, startIndex.coerceIn(0, songs.size - 1), 0L)
-        player.prepare()
-        applyShuffleAndRepeat()
-        player.play()
-        val previousState = _state.value
+        if (songs.isEmpty()) return
+        currentQueue = songs
         update {
-            PlayerState(
+            it.copy(
                 queue = songs,
                 currentIndex = startIndex.coerceIn(0, songs.size - 1),
                 isPlaying = true,
                 positionMs = 0L,
                 durationMs = songs.getOrNull(startIndex)?.durationMs ?: 0L,
-                shuffle = previousState.shuffle,
-                repeatMode = previousState.repeatMode,
             )
+        }
+        val controller = mediaController
+        if (controller != null && controller.isConnected) {
+            applyQueue(controller, songs, startIndex)
+        } else {
+            pendingQueue = songs to startIndex
+            connect()
         }
     }
 
     override fun playPause() {
-        if (player.isPlaying) player.pause() else player.play()
+        mediaController?.let { if (it.isPlaying) it.pause() else it.play() }
     }
 
     override fun next() {
-        if (player.hasNextMediaItem()) player.seekToNextMediaItem()
+        mediaController?.let {
+            if (it.hasNextMediaItem()) it.seekToNextMediaItem()
+        }
     }
 
     override fun previous() {
-        if (player.hasPreviousMediaItem()) player.seekToPreviousMediaItem()
+        mediaController?.let {
+            if (it.hasPreviousMediaItem()) it.seekToPreviousMediaItem()
+        }
     }
 
     override fun seekTo(positionMs: Long) {
-        player.seekTo(positionMs.coerceIn(0L, player.duration.coerceAtLeast(0L)))
-        update { it.copy(positionMs = positionMs.coerceAtLeast(0L)) }
+        mediaController?.let { controller ->
+            val clamped = positionMs.coerceIn(0L, controller.duration.coerceAtLeast(0L))
+            controller.seekTo(clamped)
+            update { it.copy(positionMs = clamped) }
+        }
     }
 
     override fun toggleShuffle() {
         val next = !_state.value.shuffle
-        player.shuffleModeEnabled = next
+        mediaController?.shuffleModeEnabled = next
         update { it.copy(shuffle = next) }
     }
 
@@ -109,7 +164,7 @@ class AndroidPlayerController(context: Context) : PlayerController {
             RepeatMode.ALL -> RepeatMode.ONE
             RepeatMode.ONE -> RepeatMode.OFF
         }
-        player.repeatMode = when (next) {
+        mediaController?.repeatMode = when (next) {
             RepeatMode.OFF -> Player.REPEAT_MODE_OFF
             RepeatMode.ALL -> Player.REPEAT_MODE_ALL
             RepeatMode.ONE -> Player.REPEAT_MODE_ONE
@@ -117,13 +172,121 @@ class AndroidPlayerController(context: Context) : PlayerController {
         update { it.copy(repeatMode = next) }
     }
 
-    private fun applyShuffleAndRepeat() {
-        player.shuffleModeEnabled = _state.value.shuffle
-        player.repeatMode = when (_state.value.repeatMode) {
-            RepeatMode.OFF -> Player.REPEAT_MODE_OFF
-            RepeatMode.ALL -> Player.REPEAT_MODE_ALL
-            RepeatMode.ONE -> Player.REPEAT_MODE_ONE
+    fun release() {
+        queueJob?.cancel()
+        tickerJob?.cancel()
+        val controller = mediaController
+        mediaController = null
+        controller?.let { runCatching { it.release() } }
+    }
+
+    private fun connect() {
+        if (connectInFlight) return
+        connectInFlight = true
+        val future = MediaController.Builder(appContext, sessionToken)
+            .setListener(sessionListener)
+            .buildAsync()
+        Futures.addCallback(
+            future,
+            object : FutureCallback<MediaController> {
+                override fun onSuccess(result: MediaController) {
+                    connectInFlight = false
+                    mediaController = result
+                    result.addListener(playerListener)
+                    syncFromController(result)
+                    pendingQueue?.let { (songs, index) ->
+                        pendingQueue = null
+                        applyQueue(result, songs, index)
+                    }
+                }
+
+                override fun onFailure(t: Throwable) {
+                    connectInFlight = false
+                    Log.w(TAG, "No se pudo conectar con PlaybackService", t)
+                }
+            },
+            mainExecutor,
+        )
+    }
+
+    private fun applyQueue(controller: MediaController, songs: List<Song>, startIndex: Int) {
+        queueJob?.cancel()
+        queueJob = scope.launch {
+            val items = songs.mapIndexed { index, song ->
+                val artwork = if (index == startIndex) loadArtwork(song) else null
+                song.toMediaItem(artwork)
+            }
+            controller.setMediaItems(items, startIndex.coerceIn(0, songs.size - 1), 0L)
+            controller.prepare()
+            controller.play()
+            songs.forEachIndexed { index, song ->
+                if (index == startIndex) return@forEachIndexed
+                val artwork = loadArtwork(song) ?: return@forEachIndexed
+                val current = mediaController ?: return@forEachIndexed
+                if (index != current.currentMediaItemIndex) {
+                    current.replaceMediaItem(index, song.toMediaItem(artwork))
+                }
+            }
         }
+    }
+
+    private fun syncFromController(controller: MediaController) {
+        if (currentQueue.isEmpty()) {
+            val restored = controller.restoredQueue()
+            if (restored.isNotEmpty()) currentQueue = restored
+        }
+        val queue = currentQueue
+        val index = controller.currentMediaItemIndex
+        val duration = controller.duration.coerceAtLeast(0L).takeIf { it > 0 }
+        update {
+            it.copy(
+                queue = queue,
+                currentIndex = if (index in queue.indices) index else -1,
+                isPlaying = controller.isPlaying,
+                positionMs = controller.currentPosition,
+                durationMs = duration ?: queue.getOrNull(index)?.durationMs ?: 0L,
+                shuffle = controller.shuffleModeEnabled,
+                repeatMode = controller.repeatMode.toRepeatMode(),
+            )
+        }
+        runTicker(controller.isPlaying)
+    }
+
+    private fun MediaController.restoredQueue(): List<Song> {
+        val count = mediaItemCount
+        if (count == 0) return emptyList()
+        return (0 until count).map { index -> getMediaItemAt(index).toSong(index) }
+    }
+
+    private suspend fun loadArtwork(song: Song): ByteArray? =
+        song.artwork ?: audioLibrary?.loadArtwork(song.id)
+
+    private fun Song.toMediaItem(artwork: ByteArray?): MediaItem {
+        val metadata = MediaMetadata.Builder()
+            .setTitle(title)
+            .setArtist(artist)
+            .setAlbumTitle(album)
+            .setDurationMs(durationMs)
+        if (artwork != null) {
+            metadata.setArtworkData(artwork, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+        }
+        return MediaItem.Builder()
+            .setMediaId(id)
+            .setUri(id)
+            .setMediaMetadata(metadata.build())
+            .build()
+    }
+
+    private fun MediaItem.toSong(index: Int): Song {
+        val meta = mediaMetadata
+        return Song(
+            id = mediaId,
+            title = meta.title?.toString() ?: "Sin título",
+            artist = meta.artist?.toString() ?: "Artista desconocido",
+            album = meta.albumTitle?.toString() ?: "Álbum desconocido",
+            durationMs = meta.durationMs?.takeIf { it != C.TIME_UNSET && it > 0L } ?: 0L,
+            colors = fallbackPalette[index % fallbackPalette.size],
+        )
     }
 
     private fun runTicker(isPlaying: Boolean) {
@@ -131,7 +294,15 @@ class AndroidPlayerController(context: Context) : PlayerController {
         if (!isPlaying) return
         tickerJob = scope.launch {
             while (isActive) {
-                update { it.copy(positionMs = player.currentPosition) }
+                val controller = mediaController
+                if (controller != null) {
+                    update {
+                        it.copy(
+                            positionMs = controller.currentPosition,
+                            durationMs = controller.duration.coerceAtLeast(0L),
+                        )
+                    }
+                }
                 delay(500)
             }
         }
@@ -141,8 +312,21 @@ class AndroidPlayerController(context: Context) : PlayerController {
         _state.value = transform(_state.value)
     }
 
-    fun release() {
-        tickerJob?.cancel()
-        player.release()
+    private fun Int.toRepeatMode(): RepeatMode = when (this) {
+        Player.REPEAT_MODE_OFF -> RepeatMode.OFF
+        Player.REPEAT_MODE_ALL -> RepeatMode.ALL
+        else -> RepeatMode.ONE
+    }
+
+    private val fallbackPalette = listOf(
+        listOf(Color(0xFF7C3AED), Color(0xFFEC4899)),
+        listOf(Color(0xFF06B6D4), Color(0xFF3B82F6)),
+        listOf(Color(0xFFF59E0B), Color(0xFFEF4444)),
+        listOf(Color(0xFF10B981), Color(0xFF3B82F6)),
+        listOf(Color(0xFFEC4899), Color(0xFF8B5CF6)),
+    )
+
+    private companion object {
+        const val TAG = "AndroidPlayerController"
     }
 }

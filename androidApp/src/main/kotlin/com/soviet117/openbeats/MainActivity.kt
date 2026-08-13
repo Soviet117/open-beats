@@ -11,6 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,7 +30,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             var permissionGranted by remember { mutableStateOf(hasAudioPermission(this)) }
             val library = remember { MediaStoreAudioLibrary(applicationContext) }
-            val player = remember { AndroidPlayerController(applicationContext) }
+            val player = remember { AndroidPlayerController(applicationContext, library) }
             val favoritesStore = remember { SharedPreferencesFavoritesStore(applicationContext) }
             DisposableEffect(player) {
                 onDispose { player.release() }
@@ -38,6 +39,14 @@ class MainActivity : ComponentActivity() {
                 ActivityResultContracts.RequestPermission(),
             ) { granted ->
                 permissionGranted = granted
+            }
+            val notificationLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission(),
+            ) { }
+            LaunchedEffect(permissionGranted) {
+                if (permissionGranted && needsNotificationPermission(applicationContext)) {
+                    notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
             }
             App(
                 permissionGranted = permissionGranted,
@@ -62,6 +71,13 @@ private fun audioPermissionName(): String =
 private fun hasAudioPermission(context: android.content.Context): Boolean =
     ContextCompat.checkSelfPermission(context, audioPermissionName()) ==
         PackageManager.PERMISSION_GRANTED
+
+private fun needsNotificationPermission(context: android.content.Context): Boolean =
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) != PackageManager.PERMISSION_GRANTED
 
 @Preview
 @Composable
