@@ -1,6 +1,7 @@
 package com.soviet117.openbeats.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.soviet117.openbeats.ui.theme.Obsidian
 import com.soviet117.openbeats.ui.theme.TextPrimary
 import com.soviet117.openbeats.ui.theme.TextSecondary
 import org.jetbrains.compose.resources.painterResource
@@ -29,7 +31,9 @@ fun PermissionScreen(
     onRequestPermission: () -> Unit = {},
 ) {
     Box(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .background(Obsidian),
         contentAlignment = Alignment.Center,
     ) {
         Column(
