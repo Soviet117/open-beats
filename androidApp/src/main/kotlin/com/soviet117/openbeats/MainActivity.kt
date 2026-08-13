@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             var permissionGranted by remember { mutableStateOf(hasAudioPermission(this)) }
             val library = remember { MediaStoreAudioLibrary(applicationContext) }
-            val player = remember { AndroidPlayerController(applicationContext, library) }
+            val player = remember { AndroidPlayerController(applicationContext) }
             val favoritesStore = remember { SharedPreferencesFavoritesStore(applicationContext) }
             DisposableEffect(player) {
                 onDispose { player.release() }

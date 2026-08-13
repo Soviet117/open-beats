@@ -2,6 +2,8 @@ package com.soviet117.openbeats.audio
 
 import android.content.ComponentName
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -14,6 +16,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
+import com.soviet117.openbeats.shared.R
 import com.soviet117.openbeats.ui.data.Song
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,11 +27,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executor
 
 class AndroidPlayerController(
     context: Context,
-    private val audioLibrary: AudioLibrary? = null,
 ) : PlayerController {
 
     private val appContext = context.applicationContext
@@ -36,6 +39,16 @@ class AndroidPlayerController(
     private val mainExecutor = Executor { command -> Handler(Looper.getMainLooper()).post(command) }
     private val sessionToken =
         SessionToken(appContext, ComponentName(appContext, PlaybackService::class.java))
+    private val notificationArtwork: ByteArray? by lazy {
+        runCatching {
+            val bitmap = BitmapFactory.decodeResource(appContext.resources, R.drawable.logo_app_oscuro)
+                ?: return@lazy null
+            ByteArrayOutputStream().use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 92, out)
+                out.toByteArray()
+            }
+        }.getOrNull()
+    }
 
     private var mediaController: MediaController? = null
     private var connectInFlight = false
@@ -212,21 +225,10 @@ class AndroidPlayerController(
     private fun applyQueue(controller: MediaController, songs: List<Song>, startIndex: Int) {
         queueJob?.cancel()
         queueJob = scope.launch {
-            val items = songs.mapIndexed { index, song ->
-                val artwork = if (index == startIndex) loadArtwork(song) else null
-                song.toMediaItem(artwork)
-            }
+            val items = songs.map { it.toMediaItem() }
             controller.setMediaItems(items, startIndex.coerceIn(0, songs.size - 1), 0L)
             controller.prepare()
             controller.play()
-            songs.forEachIndexed { index, song ->
-                if (index == startIndex) return@forEachIndexed
-                val artwork = loadArtwork(song) ?: return@forEachIndexed
-                val current = mediaController ?: return@forEachIndexed
-                if (index != current.currentMediaItemIndex) {
-                    current.replaceMediaItem(index, song.toMediaItem(artwork))
-                }
-            }
         }
     }
 
@@ -258,17 +260,14 @@ class AndroidPlayerController(
         return (0 until count).map { index -> getMediaItemAt(index).toSong(index) }
     }
 
-    private suspend fun loadArtwork(song: Song): ByteArray? =
-        song.artwork ?: audioLibrary?.loadArtwork(song.id)
-
-    private fun Song.toMediaItem(artwork: ByteArray?): MediaItem {
+    private fun Song.toMediaItem(): MediaItem {
         val metadata = MediaMetadata.Builder()
             .setTitle(title)
             .setArtist(artist)
             .setAlbumTitle(album)
             .setDurationMs(durationMs)
-        if (artwork != null) {
-            metadata.setArtworkData(artwork, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+        notificationArtwork?.let {
+            metadata.setArtworkData(it, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
         }
         return MediaItem.Builder()
             .setMediaId(id)

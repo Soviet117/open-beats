@@ -5,8 +5,10 @@ import android.content.Intent
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.soviet117.openbeats.shared.R
 
 class PlaybackService : MediaSessionService() {
 
@@ -28,6 +30,11 @@ class PlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(sessionActivityPendingIntent())
             .build()
+        setMediaNotificationProvider(
+            DefaultMediaNotificationProvider.Builder(this)
+                .build()
+                .apply { setSmallIcon(R.drawable.ic_stat_openbeats) },
+        )
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
