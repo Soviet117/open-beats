@@ -1,31 +1,59 @@
-This is a Kotlin Multiplatform project targeting Android, iOS.
+# Open Beats
 
-* [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+Reproductor de música **local**, **open source** y **sin anuncios invasivos**.
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
+Open Beats nació porque su autor, **soviet117**, necesitaba un reproductor de
+música local que no lo bombardeera con anuncios ni con promociones que
+interrumpen la reproducción. Y como todo programador... lo implementó :).
 
-### Running the apps
+## Características
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
+- Reproduce la música de tu dispositivo (MediaStore), sin conexión a servicios.
+- **Inicio**: recents, favoritas y todas tus canciones.
+- **Buscar** y **Biblioteca**.
+- **Now Playing** con posición, shuffle y repetir.
+- **Mini player** persistente sobre la barra de navegación.
+- **Favoritas** con persistencia local (por canción).
+- **Notificación media** con controles (anterior / play-pause / siguiente) y el
+  logo de la app en la pantalla de bloqueo.
+- Reproducción en **segundo plano** (foreground service de media playback).
+- **Audio focus**: pausa/resume automáticos con WhatsApp, llamadas o videos, y
+  detención al desconectar auriculares.
 
-- Android app: `./gradlew :androidApp:assembleDebug`
-- iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+## Stack
 
-### Running tests
+- **Kotlin Multiplatform** con **Compose Multiplatform** (UI compartida).
+- **Android**: ExoPlayer / media3 (reproducción + MediaSession/notificación).
+- **iOS**: targets `iosArm64` / `iosSimulatorArm64` (en progreso, sin desktop).
 
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
+## Estructura
 
-- Android tests: `./gradlew :shared:testAndroidHostTest`
-- iOS tests: `./gradlew :shared:iosSimulatorArm64Test`
+```
+shared/       Lógica + UI compartida (Compose). Source sets: commonMain,
+              androidMain, iosMain (+ tests)
+  audio/      PlayerController, PlayerState, AudioLibrary, MockPlayerController
+              AndroidPlayerController (MediaController → PlaybackService),
+              MediaStoreAudioLibrary, PlaybackService (MediaSessionService)
+  ui/         screens (Home, Search, Library, NowPlaying, Permission),
+              components (MiniPlayer, ArtworkCache, Rows, Sections), data, theme
+  composeResources/  recursos Compose (logo de la app: ic_ob_logo)
+androidApp/   Aplicación Android (MainActivity + manifest + iconos/launcher)
+iosApp/       Proyecto Xcode (SwiftUI) que embebe el framework estático Shared
+```
 
----
+## Cómo ejecutar
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+- **Android**: `./gradlew :androidApp:assembleDebug` y `./gradlew :androidApp:installDebug`
+  (con un dispositivo conectado por ADB). Requiere JDK 21.
+- **iOS**: abrir [`iosApp`](./iosApp) en Xcode y ejecutarlo.
+
+## Tests
+
+```bash
+./gradlew :shared:testAndroidHostTest          # unit tests en host
+./gradlew :shared:iosSimulatorArm64Test        # tests iOS (simulador)
+```
+
+## Licencia
+
+Open source — ver el repositorio para más detalles.
