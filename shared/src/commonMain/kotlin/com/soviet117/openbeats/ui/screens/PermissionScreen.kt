@@ -1,6 +1,6 @@
 package com.soviet117.openbeats.ui.screens
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,22 +9,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.soviet117.openbeats.ui.theme.BrandGradient
 import com.soviet117.openbeats.ui.theme.TextPrimary
 import com.soviet117.openbeats.ui.theme.TextSecondary
+import org.jetbrains.compose.resources.painterResource
+import open_beats.shared.generated.resources.Res
+import open_beats.shared.generated.resources.ic_ob_logo
 
 @Composable
 fun PermissionScreen(
@@ -39,20 +36,11 @@ fun PermissionScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(horizontal = 32.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(84.dp)
-                    .clip(CircleShape)
-                    .background(BrandGradient),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.GraphicEq,
-                    contentDescription = null,
-                    tint = TextPrimary,
-                    modifier = Modifier.size(44.dp),
-                )
-            }
+            Image(
+                painter = painterResource(Res.drawable.ic_ob_logo),
+                contentDescription = null,
+                modifier = Modifier.size(96.dp),
+            )
             Spacer(Modifier.height(28.dp))
             Text(
                 text = "Tu música te espera",
