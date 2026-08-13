@@ -44,6 +44,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
             implementation(libs.media3.exoplayer)
+            implementation(libs.media3.session)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
