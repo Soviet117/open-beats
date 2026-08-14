@@ -232,7 +232,16 @@ fun App(
                                     onToggleLike = toggleLike,
                                 )
                                 1 -> SearchScreen()
-                                else -> LibraryScreen()
+                                else -> LibraryScreen(
+                                    songs = songs,
+                                    likedIds = likedIds,
+                                    loading = loading,
+                                    onPlay = onPlay,
+                                    onToggleLike = toggleLike,
+                                    onOpenSearch = { onSelectTab(1) },
+                                    onOpenAlbum = { album -> onPlay(album.songs, 0) },
+                                    onOpenArtist = { artist -> onPlay(artist.songs, 0) },
+                                )
                             }
                         }
                     }

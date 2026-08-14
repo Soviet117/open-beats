@@ -168,9 +168,18 @@ fun LibraryRow(
 fun ArtistRow(
     artist: Artist,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Row(
-        modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Avatar(
