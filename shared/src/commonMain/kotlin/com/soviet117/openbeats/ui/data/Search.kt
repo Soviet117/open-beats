@@ -63,10 +63,10 @@ object GenreDetector {
     fun detect(song: Song): String? = detect(song.title, song.artist, song.album)
 
     fun detect(title: String, artist: String = "", album: String = ""): String? {
-        val haystack = normalize("$title $artist $album")
-        if (haystack.isEmpty()) return null
+        val spaced = " ${normalize("$title $artist $album")} "
+        if (spaced.isBlank()) return null
         for ((keyword, genre) in RULES) {
-            if (keyword in haystack) return genre
+            if (" $keyword " in spaced) return genre
         }
         return null
     }

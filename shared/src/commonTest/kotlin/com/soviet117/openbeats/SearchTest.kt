@@ -128,6 +128,13 @@ class SearchTest {
     }
 
     @Test
+    fun genreDetectorMatchesWholeWordsOnly() {
+        assertEquals(null, GenreDetector.detect("Killpop", "Slipknot"))
+        assertEquals(null, GenreDetector.detect("Popcorn", "Someone"))
+        assertEquals("Pop", GenreDetector.detect("Pop Hits Mix", "Someone"))
+    }
+
+    @Test
     fun genreDetectorReturnsNullWhenNoMatch() {
         assertEquals(null, GenreDetector.detect("Something Very Ordinary", "Random Artist"))
     }
