@@ -51,6 +51,7 @@ import com.soviet117.openbeats.ui.data.Mock
 import com.soviet117.openbeats.ui.data.Song
 import com.soviet117.openbeats.ui.screens.AlbumDetailScreen
 import com.soviet117.openbeats.ui.screens.ArtistDetailScreen
+import com.soviet117.openbeats.ui.screens.GenreDetailScreen
 import com.soviet117.openbeats.ui.screens.HomeScreen
 import com.soviet117.openbeats.ui.screens.LibraryScreen
 import com.soviet117.openbeats.ui.screens.NowPlayingScreen
@@ -254,6 +255,14 @@ fun App(
 
                                     is LibraryTarget.ArtistTarget -> ArtistDetailScreen(
                                         artist = target.artist,
+                                        likedIds = likedIds,
+                                        onBack = { libraryTarget = null },
+                                        onPlay = onPlay,
+                                        onToggleLike = toggleLike,
+                                    )
+
+                                    is LibraryTarget.GenreTarget -> GenreDetailScreen(
+                                        genre = target.genre,
                                         likedIds = likedIds,
                                         onBack = { libraryTarget = null },
                                         onPlay = onPlay,

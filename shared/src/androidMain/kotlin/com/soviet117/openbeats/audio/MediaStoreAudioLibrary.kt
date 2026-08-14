@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.compose.ui.graphics.Color
+import com.soviet117.openbeats.ui.data.GenreDetector
 import com.soviet117.openbeats.ui.data.MetadataCleaner
 import com.soviet117.openbeats.ui.data.Song
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +23,7 @@ class MediaStoreAudioLibrary(private val context: Context) : AudioLibrary {
 
     override suspend fun loadSongs(): List<Song> = withContext(Dispatchers.IO) {
         val songs = mutableListOf<Song>()
+        val genreMap = loadGenreMap()
         val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         val projection = arrayOf(
             MediaStore.Audio.Media._ID,
@@ -56,6 +58,7 @@ class MediaStoreAudioLibrary(private val context: Context) : AudioLibrary {
                     mediaAlbum = cursor.getString(albumCol),
                     fileName = cursor.getString(displayNameCol),
                 )
+                val tagGenre = genreMap[id]?.trim().orEmpty()
                 songs += Song(
                     id = songId,
                     title = parsed.title,
@@ -63,11 +66,40 @@ class MediaStoreAudioLibrary(private val context: Context) : AudioLibrary {
                     album = parsed.album,
                     durationMs = durationMs,
                     colors = palette[index % palette.size],
+                    genre = tagGenre.ifEmpty {
+                        GenreDetector.detect(parsed.title, parsed.artist, parsed.album).orEmpty()
+                    },
                 )
                 index++
             }
         }
         songs
+    }
+
+    private fun loadGenreMap(): Map<Long, String> {
+        val map = mutableMapOf<Long, String>()
+        val genresUri = MediaStore.Audio.Genres.getContentUri("external")
+        val projection = arrayOf(
+            MediaStore.Audio.Genres._ID,
+            MediaStore.Audio.Genres.NAME,
+        )
+        context.contentResolver.query(genresUri, projection, null, null, null)?.use { cursor ->
+            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Genres._ID)
+            val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Genres.NAME)
+            while (cursor.moveToNext()) {
+                val genreId = cursor.getLong(idCol)
+                val name = cursor.getString(nameCol) ?: continue
+                val membersUri = MediaStore.Audio.Genres.Members.getContentUri("external", genreId)
+                val memberProjection = arrayOf(MediaStore.Audio.Media._ID)
+                context.contentResolver.query(membersUri, memberProjection, null, null, null)?.use { members ->
+                    val audioIdCol = members.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                    while (members.moveToNext()) {
+                        map.putIfAbsent(members.getLong(audioIdCol), name)
+                    }
+                }
+            }
+        }
+        return map
     }
 
     override suspend fun loadArtwork(songId: String): ByteArray? {

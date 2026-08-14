@@ -10,6 +10,7 @@ data class Song(
     val durationMs: Long,
     val artwork: ByteArray? = null,
     val colors: List<Color>,
+    val genre: String = "",
 )
 
 data class Playlist(

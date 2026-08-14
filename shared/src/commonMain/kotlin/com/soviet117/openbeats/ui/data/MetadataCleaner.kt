@@ -89,6 +89,21 @@ object MetadataCleaner {
         return COLLAPSE_WS.replace(spaced, " ").trim()
     }
 
+    fun normalizeSearchKey(value: String): String {
+        var out = value.trim().lowercase()
+        for ((accented, plain) in ACCENTS) {
+            out = out.replace(accented, plain)
+        }
+        return COLLAPSE_WS.replace(out, " ").trim()
+    }
+
+    private val ACCENTS = listOf(
+        'á' to 'a', 'é' to 'e', 'í' to 'i', 'ó' to 'o', 'ú' to 'u',
+        'à' to 'a', 'è' to 'e', 'ì' to 'i', 'ò' to 'o', 'ù' to 'u',
+        'ä' to 'a', 'ë' to 'e', 'ï' to 'i', 'ö' to 'o', 'ü' to 'u',
+        'ñ' to 'n', 'ç' to 'c',
+    )
+
     fun parseFileName(fileName: String?): ParsedFileName {
         var name = fileName?.trim() ?: return ParsedFileName("", "", "")
         name = name.removeSuffixByExtension()

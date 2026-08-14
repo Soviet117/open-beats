@@ -59,6 +59,49 @@ fun deriveArtists(songs: List<Song>): List<LibraryArtist> {
 sealed interface LibraryTarget {
     data class AlbumTarget(val album: Album) : LibraryTarget
     data class ArtistTarget(val artist: LibraryArtist) : LibraryTarget
+    data class GenreTarget(val genre: LibraryGenre) : LibraryTarget
+}
+
+data class LibraryGenre(
+    val name: String,
+    val songs: List<Song>,
+    val colors: List<Color>,
+)
+
+fun deriveGenres(songs: List<Song>): List<LibraryGenre> {
+    val groups = LinkedHashMap<String, MutableList<Song>>()
+    val names = LinkedHashMap<String, String>()
+    for (song in songs) {
+        val genre = song.genre
+        if (genre.isBlank()) continue
+        val key = MetadataCleaner.normalizeSearchKey(genre)
+        if (key.isEmpty()) continue
+        groups.getOrPut(key) { mutableListOf() }.add(song)
+        names.putIfAbsent(key, genre.trim())
+    }
+    return groups.map { (key, genreSongs) ->
+        LibraryGenre(
+            name = names.getValue(key),
+            songs = genreSongs,
+            colors = genreColors(key),
+        )
+    }.sortedBy { it.name.lowercase() }
+}
+
+private val genrePalette = listOf(
+    listOf(Color(0xFF7C3AED), Color(0xFFEC4899)),
+    listOf(Color(0xFF06B6D4), Color(0xFF3B82F6)),
+    listOf(Color(0xFFF59E0B), Color(0xFFEF4444)),
+    listOf(Color(0xFF10B981), Color(0xFF3B82F6)),
+    listOf(Color(0xFFEC4899), Color(0xFF8B5CF6)),
+    listOf(Color(0xFFF97316), Color(0xFFF43F5E)),
+    listOf(Color(0xFF14B8A6), Color(0xFF84CC16)),
+    listOf(Color(0xFF8B5CF6), Color(0xFF06B6D4)),
+)
+
+fun genreColors(key: String): List<Color> {
+    val idx = (key.hashCode() and Int.MAX_VALUE) % genrePalette.size
+    return genrePalette[idx]
 }
 
 fun songsLabel(count: Int): String = if (count == 1) "1 canción" else "$count canciones"
