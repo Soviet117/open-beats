@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.compose.ui.graphics.Color
+import com.soviet117.openbeats.ui.data.MetadataCleaner
 import com.soviet117.openbeats.ui.data.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -29,15 +30,18 @@ class MediaStoreAudioLibrary(private val context: Context) : AudioLibrary {
             MediaStore.Audio.Media.ALBUM,
             MediaStore.Audio.Media.DURATION,
             MediaStore.Audio.Media.ALBUM_ID,
+            MediaStore.Audio.Media.DISPLAY_NAME,
         )
+        val selection = "IS_RINGTONE=0 AND IS_NOTIFICATION=0 AND IS_ALARM=0"
         val sortOrder = "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC"
-        context.contentResolver.query(collection, projection, null, null, sortOrder)?.use { cursor ->
+        context.contentResolver.query(collection, projection, selection, null, sortOrder)?.use { cursor ->
             val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
             val albumCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
             val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
             val albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+            val displayNameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
 
             var index = 0
             while (cursor.moveToNext()) {
@@ -46,11 +50,17 @@ class MediaStoreAudioLibrary(private val context: Context) : AudioLibrary {
                 if (durationMs < 30_000) continue
                 val songId = ContentUris.withAppendedId(collection, id).toString()
                 albumIds[songId] = cursor.getLong(albumIdCol)
+                val parsed = MetadataCleaner.infer(
+                    mediaTitle = cursor.getString(titleCol),
+                    mediaArtist = cursor.getString(artistCol),
+                    mediaAlbum = cursor.getString(albumCol),
+                    fileName = cursor.getString(displayNameCol),
+                )
                 songs += Song(
                     id = songId,
-                    title = cursor.getString(titleCol) ?: "Sin título",
-                    artist = cursor.getString(artistCol) ?: "Artista desconocido",
-                    album = cursor.getString(albumCol) ?: "Álbum desconocido",
+                    title = parsed.title,
+                    artist = parsed.artist,
+                    album = parsed.album,
                     durationMs = durationMs,
                     colors = palette[index % palette.size],
                 )
