@@ -27,10 +27,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.soviet117.openbeats.ui.data.Artist
+import com.soviet117.openbeats.ui.data.LibraryArtist
 import com.soviet117.openbeats.ui.data.Playlist
 import com.soviet117.openbeats.ui.data.Song
 import com.soviet117.openbeats.ui.data.formatDuration
+import com.soviet117.openbeats.ui.data.songsLabel
 import com.soviet117.openbeats.ui.theme.BrandViolet
 import com.soviet117.openbeats.ui.theme.TextMuted
 import com.soviet117.openbeats.ui.theme.TextPrimary
@@ -166,7 +167,7 @@ fun LibraryRow(
 
 @Composable
 fun ArtistRow(
-    artist: Artist,
+    artist: LibraryArtist,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
 ) {
@@ -197,7 +198,7 @@ fun ArtistRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = "Artista · ${artist.genre}",
+                text = songsLabel(artist.songs.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = TextSecondary,
             )

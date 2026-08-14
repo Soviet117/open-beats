@@ -29,6 +29,7 @@ import com.soviet117.openbeats.ui.components.SongArtwork
 import com.soviet117.openbeats.ui.components.SongRow
 import com.soviet117.openbeats.ui.data.Album
 import com.soviet117.openbeats.ui.data.Song
+import com.soviet117.openbeats.ui.data.songsLabel
 import com.soviet117.openbeats.ui.theme.TextPrimary
 import com.soviet117.openbeats.ui.theme.TextSecondary
 
@@ -85,7 +86,7 @@ fun AlbumDetailScreen(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = "${album.songs.size} canciones",
+                    text = songsLabel(album.songs.size),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                 )

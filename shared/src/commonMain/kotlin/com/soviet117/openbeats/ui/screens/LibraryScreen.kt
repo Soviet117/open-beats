@@ -32,7 +32,6 @@ import com.soviet117.openbeats.ui.components.ArtistRow
 import com.soviet117.openbeats.ui.components.Chip
 import com.soviet117.openbeats.ui.components.PlaylistCard
 import com.soviet117.openbeats.ui.components.SongRow
-import com.soviet117.openbeats.ui.data.Artist
 import com.soviet117.openbeats.ui.data.LibraryArtist
 import com.soviet117.openbeats.ui.data.Album
 import com.soviet117.openbeats.ui.data.Mock
@@ -176,12 +175,7 @@ private fun ArtistsTab(
     ) {
         itemsIndexed(artists) { index, artist ->
             ArtistRow(
-                artist = Artist(
-                    id = index,
-                    name = artist.name,
-                    genre = "Artista",
-                    colors = artist.colors,
-                ),
+                artist = artist,
                 onClick = { onOpenArtist(artist) },
             )
         }

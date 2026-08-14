@@ -60,3 +60,5 @@ sealed interface LibraryTarget {
     data class AlbumTarget(val album: Album) : LibraryTarget
     data class ArtistTarget(val artist: LibraryArtist) : LibraryTarget
 }
+
+fun songsLabel(count: Int): String = if (count == 1) "1 canción" else "$count canciones"
