@@ -22,6 +22,7 @@ import com.soviet117.openbeats.audio.AndroidPlayerController
 import com.soviet117.openbeats.audio.MediaStoreAudioLibrary
 import com.soviet117.openbeats.data.RecentSongsStore
 import com.soviet117.openbeats.data.SharedPreferencesFavoritesStore
+import com.soviet117.openbeats.data.SharedPreferencesHintsStore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,6 +35,7 @@ class MainActivity : ComponentActivity() {
             val player = remember { AndroidPlayerController(applicationContext) }
             val favoritesStore = remember { SharedPreferencesFavoritesStore(applicationContext) }
             val recentsStore = remember { RecentSongsStore(applicationContext) }
+            val hintsStore = remember { SharedPreferencesHintsStore(applicationContext) }
             DisposableEffect(player) {
                 onDispose { player.release() }
             }
@@ -63,6 +65,7 @@ class MainActivity : ComponentActivity() {
                 playerController = player,
                 favoritesStore = favoritesStore,
                 recentStore = recentsStore,
+                hintsStore = hintsStore,
                 appVersion = appVersion,
             )
         }

@@ -52,16 +52,16 @@ object Mock {
     private val cVioletCyan = listOf(Color(0xFF8B5CF6), Color(0xFF06B6D4))
 
     val songs = listOf(
-        Song("mock-1", "Noche de Cristal", "Luna Radiante", "Éxitos de Luna", 222_000, colors = cVioletPink),
-        Song("mock-2", "Midnight Drive", "Neon Harbor", "Horizonte Sintético", 198_000, colors = cCyanBlue),
-        Song("mock-3", "Baila Conmigo", "Ritmo Solar", "Fuego Latino", 185_000, colors = cAmberRed),
-        Song("mock-4", "Electric Dreams", "Nova Wave", "Puro Pop", 241_000, colors = cPinkViolet),
-        Song("mock-5", "Café en Domingo", "Los Buenos Días", "Momentos Suaves", 167_000, colors = cTealLime),
-        Song("mock-6", "Gravity", "Astra Nova", "Neón en la Noche", 213_000, colors = cVioletCyan),
-        Song("mock-7", "Olas del Mar", "Brisa Tropical", "Éxitos del Verano", 236_000, colors = cEmeraldBlue),
-        Song("mock-8", "City Lights", "Neon Harbor", "Horizonte Sintético", 179_000, colors = cCyanBlue),
-        Song("mock-9", "Corazón Rebelde", "Luna Radiante", "Melodías del Alma", 201_000, colors = cOrangeRose),
-        Song("mock-10", "Pixel Hearts", "Nova Wave", "Puro Pop", 191_000, colors = cPinkViolet),
+        Song("mock-1", "Noche de Cristal", "Luna Radiante", "Éxitos de Luna", 222_000, colors = cVioletPink, genre = "Pop"),
+        Song("mock-2", "Midnight Drive", "Neon Harbor", "Horizonte Sintético", 198_000, colors = cCyanBlue, genre = "Synthwave"),
+        Song("mock-3", "Baila Conmigo", "Ritmo Solar", "Fuego Latino", 185_000, colors = cAmberRed, genre = "Reggaetón"),
+        Song("mock-4", "Electric Dreams", "Nova Wave", "Puro Pop", 241_000, colors = cPinkViolet, genre = "Electrónica"),
+        Song("mock-5", "Café en Domingo", "Los Buenos Días", "Momentos Suaves", 167_000, colors = cTealLime, genre = "Acústico"),
+        Song("mock-6", "Gravity", "Astra Nova", "Neón en la Noche", 213_000, colors = cVioletCyan, genre = "Electrónica"),
+        Song("mock-7", "Olas del Mar", "Brisa Tropical", "Éxitos del Verano", 236_000, colors = cEmeraldBlue, genre = "Reggae"),
+        Song("mock-8", "City Lights", "Neon Harbor", "Horizonte Sintético", 179_000, colors = cCyanBlue, genre = "Synthwave"),
+        Song("mock-9", "Corazón Rebelde", "Luna Radiante", "Melodías del Alma", 201_000, colors = cOrangeRose, genre = "Rock"),
+        Song("mock-10", "Pixel Hearts", "Nova Wave", "Puro Pop", 191_000, colors = cPinkViolet, genre = "Pop"),
     )
 
     val playlists = listOf(

@@ -66,9 +66,12 @@ class MediaStoreAudioLibrary(private val context: Context) : AudioLibrary {
                     album = parsed.album,
                     durationMs = durationMs,
                     colors = palette[index % palette.size],
-                    genre = tagGenre.ifEmpty {
-                        GenreDetector.detect(parsed.title, parsed.artist, parsed.album).orEmpty()
-                    },
+                    genre = GenreDetector.resolve(
+                        tagGenre.ifEmpty { null },
+                        parsed.title,
+                        parsed.artist,
+                        parsed.album,
+                    ).orEmpty(),
                 )
                 index++
             }

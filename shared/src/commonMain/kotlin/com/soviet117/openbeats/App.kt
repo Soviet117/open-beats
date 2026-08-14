@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -43,6 +44,7 @@ import com.soviet117.openbeats.audio.MockPlayerController
 import com.soviet117.openbeats.audio.PlayerController
 import com.soviet117.openbeats.audio.PlayerState
 import com.soviet117.openbeats.data.FavoritesStore
+import com.soviet117.openbeats.data.HintsStore
 import com.soviet117.openbeats.data.RecentStore
 import com.soviet117.openbeats.ui.components.MiniPlayer
 import com.soviet117.openbeats.ui.components.ArtworkCache
@@ -62,6 +64,7 @@ import com.soviet117.openbeats.ui.theme.Obsidian
 import com.soviet117.openbeats.ui.theme.OpenBeatsTheme
 import com.soviet117.openbeats.ui.theme.TextMuted
 import com.soviet117.openbeats.ui.theme.TextPrimary
+import kotlinx.coroutines.launch
 
 private data class Tab(
     val label: String,
@@ -87,6 +90,7 @@ fun App(
     playerController: PlayerController? = null,
     favoritesStore: FavoritesStore? = null,
     recentStore: RecentStore? = null,
+    hintsStore: HintsStore? = null,
     appVersion: String? = null,
 ) {
     OpenBeatsTheme {
@@ -100,6 +104,7 @@ fun App(
         var recentsLoaded by remember { mutableStateOf(false) }
         var showPlayer by remember { mutableStateOf(false) }
         var libraryTarget by remember { mutableStateOf<LibraryTarget?>(null) }
+        var showGenreTip by remember { mutableStateOf(false) }
 
         LaunchedEffect(audioLibrary) {
             val library = audioLibrary ?: return@LaunchedEffect
@@ -130,6 +135,19 @@ fun App(
             val store = recentStore ?: return@LaunchedEffect
             recentIds = runCatching { store.load() }.getOrDefault(emptyList())
             recentsLoaded = true
+        }
+
+        LaunchedEffect(hintsStore) {
+            val store = hintsStore ?: return@LaunchedEffect
+            showGenreTip = !runCatching { store.genreTipSeen() }.getOrDefault(true)
+        }
+
+        val scope = rememberCoroutineScope()
+        val dismissGenreTip: () -> Unit = remember {
+            {
+                showGenreTip = false
+                hintsStore?.let { store -> scope.launch { runCatching { store.markGenreTipSeen() } } }
+            }
         }
 
         val toggleLike: (String) -> Unit = remember {
@@ -265,6 +283,8 @@ fun App(
                                         loading = loading,
                                         appVersion = appVersion,
                                         recents = recentSongs,
+                                        showGenreTip = showGenreTip,
+                                        onDismissGenreTip = dismissGenreTip,
                                         onPlay = onPlay,
                                         onToggleLike = toggleLike,
                                     )

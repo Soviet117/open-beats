@@ -1,5 +1,6 @@
 package com.soviet117.openbeats.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -64,6 +65,8 @@ fun HomeScreen(
     loading: Boolean = false,
     appVersion: String? = null,
     recents: List<Song>? = null,
+    showGenreTip: Boolean = false,
+    onDismissGenreTip: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val albums = remember(songs) { deriveAlbums(songs) }
@@ -130,6 +133,17 @@ fun HomeScreen(
             Spacer(Modifier.height(20.dp))
         }
         if (loading) {
+            if (showGenreTip) {
+                item {
+                    GenreTipCard(
+                        onDismiss = onDismissGenreTip,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    )
+                }
+                item {
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
             item {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
@@ -142,6 +156,17 @@ fun HomeScreen(
                 }
             }
             return@LazyColumn
+        }
+        if (showGenreTip) {
+            item {
+                GenreTipCard(
+                    onDismiss = onDismissGenreTip,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                )
+            }
+            item {
+                Spacer(Modifier.height(16.dp))
+            }
         }
         if (songs.isEmpty()) {
             item {
@@ -323,6 +348,38 @@ private fun AboutDialog(
                 TextButton(onClick = onDismiss) {
                     Text("Cerrar", color = BrandSoft)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenreTipCard(
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceHigh),
+        border = BorderStroke(1.dp, BrandSoft.copy(alpha = 0.35f)),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(
+                text = "Consejo",
+                style = MaterialTheme.typography.labelMedium,
+                color = BrandSoft,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Guarda tus canciones como «Artista — Canción». " +
+                    "Los filtros de género y la búsqueda aciertan mejor con títulos claros.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+            )
+            Spacer(Modifier.height(4.dp))
+            TextButton(onClick = onDismiss) {
+                Text("Entendido", color = BrandSoft)
             }
         }
     }

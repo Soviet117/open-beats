@@ -27,8 +27,8 @@ android {
         applicationId = "com.soviet117.openbeats"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 31
-        versionName = "0.5.11"
+        versionCode = 32
+        versionName = "0.6.0"
     }
     packaging {
         resources {

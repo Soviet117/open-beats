@@ -129,7 +129,7 @@ class SearchTest {
 
     @Test
     fun genreDetectorMatchesWholeWordsOnly() {
-        assertEquals(null, GenreDetector.detect("Killpop", "Slipknot"))
+        assertEquals(null, GenreDetector.detect("Killpop", "Some Artist"))
         assertEquals(null, GenreDetector.detect("Popcorn", "Someone"))
         assertEquals("Pop", GenreDetector.detect("Pop Hits Mix", "Someone"))
     }
@@ -137,5 +137,69 @@ class SearchTest {
     @Test
     fun genreDetectorReturnsNullWhenNoMatch() {
         assertEquals(null, GenreDetector.detect("Something Very Ordinary", "Random Artist"))
+    }
+
+    @Test
+    fun genreDetectorDetectsGenreFromArtist() {
+        assertEquals("Metal", GenreDetector.detect("Solway Firth", "Slipknot"))
+        assertEquals("Metal", GenreDetector.detect("Whiplash", "Metallica"))
+        assertEquals("Metal", GenreDetector.detect("Zenith", "Ghost"))
+        assertEquals("Rock", GenreDetector.detect("Comfortably Numb", "Pink Floyd"))
+        assertEquals("Rock", GenreDetector.detect("Runaway", "Linkin Park"))
+        assertEquals("Rock", GenreDetector.detect("Baila", "Maná"))
+        assertEquals("Electrónica", GenreDetector.detect("Lonely", "Avicii"))
+        assertEquals("Indie / Alternativo", GenreDetector.detect("I Wanna Be Yours", "Arctic Monkeys"))
+        assertEquals("Hip-Hop / Rap", GenreDetector.detect("Killpop", "ZXtentation"))
+    }
+
+    @Test
+    fun genreDetectorArtistMatchIsTolerant() {
+        assertEquals("Rock", GenreDetector.detect("Welcome To The Jungle", "Trim Guns Nu0027 Roses"))
+        assertEquals("Rock", GenreDetector.detect("Welcome To The Jungle", "Guns N' Roses"))
+    }
+
+    @Test
+    fun normalizeGenreCollapsesVariants() {
+        assertEquals("Metal", GenreDetector.normalizeGenre("Heavy Metal"))
+        assertEquals("Metal", GenreDetector.normalizeGenre("Nu Metal"))
+        assertEquals("Metal", GenreDetector.normalizeGenre("Metal"))
+        assertEquals("Rock", GenreDetector.normalizeGenre("Hard Rock"))
+        assertEquals("Rock", GenreDetector.normalizeGenre("Classic Rock"))
+        assertEquals("Rock", GenreDetector.normalizeGenre("Rock & Roll"))
+        assertEquals("Rock", GenreDetector.normalizeGenre("Rock/Pop"))
+        assertEquals("Regional Mexicano", GenreDetector.normalizeGenre("Regional Mexicano"))
+        assertEquals(null, GenreDetector.normalizeGenre("YTCONVERT.in"))
+        assertEquals(null, GenreDetector.normalizeGenre(""))
+        assertEquals(null, GenreDetector.normalizeGenre(null))
+    }
+
+    @Test
+    fun resolvePrefersTagOverArtistAndKeywords() {
+        assertEquals("Jazz", GenreDetector.resolve("Jazz", "Solway Firth", "Slipknot"))
+        assertEquals("Metal", GenreDetector.resolve("YTCONVERT.in", "Solway Firth", "Slipknot"))
+        assertEquals("Metal", GenreDetector.resolve(null, "Solway Firth", "Slipknot"))
+        assertEquals("Rock", GenreDetector.resolve(null, "Rock Is Dead", "Unknown Band"))
+    }
+
+    @Test
+    fun genreDetectorFindsRockMetalKeywords() {
+        assertEquals("Metal", GenreDetector.detect("Heavy Metal Thunder", "Some Artist"))
+        assertEquals("Metal", GenreDetector.detect("", "Some Artist", "Thrash Album"))
+        assertEquals("Metal", GenreDetector.detect("Nu Metal Mix", "Some Artist"))
+        assertEquals("Rock", GenreDetector.detect("Hard Rock Café", "Some Artist"))
+        assertEquals("Rock", GenreDetector.detect("Rock And Roll Band", "Some Artist"))
+    }
+
+    @Test
+    fun deriveGenresCollapsesCanonicalVariants() {
+        val genres = deriveGenres(
+            listOf(
+                song("1", "A", "X", "Y", genre = "Heavy Metal"),
+                song("2", "B", "X", "Y", genre = "Metal"),
+            ),
+        )
+        assertEquals(1, genres.size)
+        assertEquals("Metal", genres.first().name)
+        assertEquals(2, genres.first().songs.size)
     }
 }

@@ -72,12 +72,12 @@ fun deriveGenres(songs: List<Song>): List<LibraryGenre> {
     val groups = LinkedHashMap<String, MutableList<Song>>()
     val names = LinkedHashMap<String, String>()
     for (song in songs) {
-        val genre = song.genre
+        val genre = GenreDetector.normalizeGenre(song.genre) ?: song.genre.trim()
         if (genre.isBlank()) continue
         val key = MetadataCleaner.normalizeSearchKey(genre)
         if (key.isEmpty()) continue
         groups.getOrPut(key) { mutableListOf() }.add(song)
-        names.putIfAbsent(key, genre.trim())
+        names.putIfAbsent(key, genre)
     }
     return groups.map { (key, genreSongs) ->
         LibraryGenre(
