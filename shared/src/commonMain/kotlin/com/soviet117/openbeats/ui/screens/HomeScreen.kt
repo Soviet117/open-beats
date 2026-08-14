@@ -43,6 +43,7 @@ import com.soviet117.openbeats.ui.components.SectionHeader
 import com.soviet117.openbeats.ui.components.SongRow
 import com.soviet117.openbeats.ui.data.Playlist
 import com.soviet117.openbeats.ui.data.Song
+import com.soviet117.openbeats.ui.data.deriveAlbums
 import com.soviet117.openbeats.ui.data.greetingForHour
 import com.soviet117.openbeats.ui.theme.BrandSoft
 import com.soviet117.openbeats.ui.theme.BrandViolet
@@ -53,30 +54,6 @@ import com.soviet117.openbeats.ui.theme.TextSecondary
 import org.jetbrains.compose.resources.painterResource
 import open_beats.shared.generated.resources.Res
 import open_beats.shared.generated.resources.ic_ob_logo
-
-private data class Album(
-    val playlist: Playlist,
-    val songs: List<Song>,
-)
-
-private fun deriveAlbums(songs: List<Song>): List<Album> {
-    val grouped = LinkedHashMap<String, MutableList<Song>>()
-    for (song in songs) {
-        grouped.getOrPut(song.album) { mutableListOf() }.add(song)
-    }
-    return grouped.map { (name, albumSongs) ->
-        Album(
-            playlist = Playlist(
-                id = name.hashCode(),
-                name = name,
-                subtitle = "Álbum",
-                songCount = albumSongs.size,
-                colors = albumSongs.first().colors,
-            ),
-            songs = albumSongs,
-        )
-    }
-}
 
 @Composable
 fun HomeScreen(
@@ -190,7 +167,13 @@ fun HomeScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             rowItems.forEach { album ->
                                 RecentTile(
-                                    playlist = album.playlist,
+                                    playlist = Playlist(
+                                        id = album.name.hashCode(),
+                                        name = album.name,
+                                        subtitle = album.subtitle,
+                                        songCount = album.songs.size,
+                                        colors = album.colors,
+                                    ),
                                     modifier = Modifier.weight(1f),
                                     onClick = { onPlay(album.songs, 0) },
                                 )
