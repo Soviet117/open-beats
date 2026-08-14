@@ -269,7 +269,16 @@ fun App(
                                         onToggleLike = toggleLike,
                                     )
 
-                                    1 -> SearchScreen()
+                                    1 -> SearchScreen(
+                                        songs = songs,
+                                        likedIds = likedIds,
+                                        loading = loading,
+                                        onPlay = onPlay,
+                                        onToggleLike = toggleLike,
+                                        onOpenAlbum = { libraryTarget = LibraryTarget.AlbumTarget(it) },
+                                        onOpenArtist = { libraryTarget = LibraryTarget.ArtistTarget(it) },
+                                        onOpenGenre = { libraryTarget = LibraryTarget.GenreTarget(it) },
+                                    )
                                     else -> LibraryScreen(
                                         songs = songs,
                                         likedIds = likedIds,

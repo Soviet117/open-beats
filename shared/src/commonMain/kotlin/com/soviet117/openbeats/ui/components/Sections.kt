@@ -100,12 +100,18 @@ fun PlaylistCard(
 fun GenreCard(
     genre: Genre,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(Brush.linearGradient(genre.colors))
-            .height(96.dp),
+            .height(96.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
         contentAlignment = Alignment.BottomStart,
     ) {
         Text(

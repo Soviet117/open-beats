@@ -1,6 +1,8 @@
 package com.soviet117.openbeats.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,101 +17,315 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.soviet117.openbeats.ui.components.ArtistRow
 import com.soviet117.openbeats.ui.components.Chip
 import com.soviet117.openbeats.ui.components.GenreCard
+import com.soviet117.openbeats.ui.components.PlaylistCard
 import com.soviet117.openbeats.ui.components.SectionHeader
+import com.soviet117.openbeats.ui.components.SongRow
+import com.soviet117.openbeats.ui.data.Album
+import com.soviet117.openbeats.ui.data.Genre
+import com.soviet117.openbeats.ui.data.LibraryArtist
+import com.soviet117.openbeats.ui.data.LibraryGenre
 import com.soviet117.openbeats.ui.data.Mock
+import com.soviet117.openbeats.ui.data.MusicSearchSource
+import com.soviet117.openbeats.ui.data.Playlist
+import com.soviet117.openbeats.ui.data.Song
+import com.soviet117.openbeats.ui.data.deriveGenres
+import com.soviet117.openbeats.ui.data.searchLibrary
+import com.soviet117.openbeats.ui.theme.BrandSoft
+import com.soviet117.openbeats.ui.theme.BrandViolet
 import com.soviet117.openbeats.ui.theme.SurfaceHigh
 import com.soviet117.openbeats.ui.theme.TextPrimary
 import com.soviet117.openbeats.ui.theme.TextSecondary
+import kotlinx.coroutines.delay
 
 @Composable
 fun SearchScreen(
+    songs: List<Song> = Mock.songs,
+    likedIds: Set<String> = emptySet(),
+    onPlay: (List<Song>, Int) -> Unit = { _, _ -> },
+    onToggleLike: (String) -> Unit = {},
+    loading: Boolean = false,
+    onOpenAlbum: (Album) -> Unit = {},
+    onOpenArtist: (LibraryArtist) -> Unit = {},
+    onOpenGenre: (LibraryGenre) -> Unit = {},
+    remoteSearch: MusicSearchSource? = null,
     modifier: Modifier = Modifier,
 ) {
+    val genres = remember(songs) { deriveGenres(songs) }
+    var query by remember { mutableStateOf("") }
+    var debouncedQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(query) {
+        delay(250)
+        debouncedQuery = query
+    }
+
+    val results = remember(debouncedQuery, songs) { searchLibrary(debouncedQuery, songs) }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(20.dp),
+        contentPadding = PaddingValues(bottom = 16.dp),
     ) {
         item {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
             Text(
                 text = "Buscar",
                 style = MaterialTheme.typography.headlineLarge,
                 color = TextPrimary,
+                modifier = Modifier.padding(horizontal = 20.dp),
             )
             Spacer(Modifier.height(16.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = SurfaceHigh,
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Search,
-                        contentDescription = null,
-                        tint = TextSecondary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = "¿Qué quieres escuchar?",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
-                    )
-                }
-            }
+            SearchField(
+                query = query,
+                onQueryChange = { query = it },
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
             Spacer(Modifier.height(16.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                itemsIndexed(Mock.searchChips) { index, chip ->
-                    Chip(
-                        text = chip,
-                        selected = index == 0,
+        }
+
+        if (loading && songs.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        color = BrandViolet,
+                        modifier = Modifier.size(32.dp),
                     )
                 }
             }
+            return@LazyColumn
         }
-        item {
-            Spacer(Modifier.height(28.dp))
-        }
-        item {
-            SectionHeader(title = "Explora por género")
-        }
-        item {
-            Spacer(Modifier.height(12.dp))
-        }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Mock.genres.chunked(2).forEach { rowItems ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        rowItems.forEach { genre ->
-                            GenreCard(
-                                genre = genre,
-                                modifier = Modifier.weight(1f),
+
+        if (debouncedQuery.isBlank()) {
+            if (genres.isNotEmpty()) {
+                item {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        itemsIndexed(genres) { _, genre ->
+                            Chip(
+                                text = genre.name,
+                                selected = false,
+                                onClick = { onOpenGenre(genre) },
                             )
-                        }
-                        if (rowItems.size == 1) {
-                            Spacer(Modifier.weight(1f))
                         }
                     }
                 }
             }
+            item {
+                Spacer(Modifier.height(28.dp))
+                SectionHeader(title = "Explora por género")
+            }
+            item {
+                Spacer(Modifier.height(12.dp))
+            }
+            if (genres.isEmpty()) {
+                item {
+                    Text(
+                        text = "Aún no hay géneros detectados en tu biblioteca",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            } else {
+                item {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        genres.chunked(2).forEach { rowItems ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                rowItems.forEach { genre ->
+                                    GenreCard(
+                                        genre = Genre(genre.name, genre.colors),
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { onOpenGenre(genre) },
+                                    )
+                                }
+                                if (rowItems.size == 1) {
+                                    Spacer(Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            item {
+                Spacer(Modifier.height(20.dp))
+            }
+        } else {
+            if (results.songs.isNotEmpty()) {
+                item {
+                    SectionHeader(title = "Canciones")
+                }
+                itemsIndexed(results.songs, key = { _, song -> "res-${song.id}" }) { index, song ->
+                    SongRow(
+                        song = song,
+                        index = index + 1,
+                        isLiked = song.id in likedIds,
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        onClick = {
+                            val queueIndex = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                            onPlay(songs, queueIndex)
+                        },
+                        onToggleLike = { onToggleLike(song.id) },
+                    )
+                }
+                item {
+                    Spacer(Modifier.height(28.dp))
+                }
+            }
+            if (results.albums.isNotEmpty()) {
+                item {
+                    SectionHeader(title = "Álbumes")
+                }
+                item {
+                    Spacer(Modifier.height(8.dp))
+                }
+                item {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        results.albums.chunked(2).forEach { rowItems ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                rowItems.forEach { album ->
+                                    PlaylistCard(
+                                        playlist = Playlist(
+                                            id = album.name.hashCode(),
+                                            name = album.name,
+                                            subtitle = album.subtitle,
+                                            songCount = album.songs.size,
+                                            colors = album.colors,
+                                        ),
+                                        onClick = { onOpenAlbum(album) },
+                                    )
+                                }
+                                if (rowItems.size == 1) {
+                                    Spacer(Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+                item {
+                    Spacer(Modifier.height(28.dp))
+                }
+            }
+            if (results.artists.isNotEmpty()) {
+                item {
+                    SectionHeader(title = "Artistas")
+                }
+                item {
+                    Spacer(Modifier.height(4.dp))
+                }
+                itemsIndexed(results.artists, key = { _, artist -> "res-art-${artist.name}" }) { _, artist ->
+                    ArtistRow(
+                        artist = artist,
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        onClick = { onOpenArtist(artist) },
+                    )
+                }
+                item {
+                    Spacer(Modifier.height(28.dp))
+                }
+            }
+            if (results.isEmpty) {
+                item {
+                    Text(
+                        text = "Sin resultados para \"$debouncedQuery\"",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
         }
-        item {
-            Spacer(Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun SearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = SurfaceHigh,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Search,
+                contentDescription = null,
+                tint = TextSecondary,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                textStyle = MaterialTheme.typography.bodyMedium.copy(color = TextPrimary),
+                cursorBrush = SolidColor(BrandSoft),
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+                decorationBox = { innerTextField ->
+                    Box {
+                        if (query.isEmpty()) {
+                            Text(
+                                text = "¿Qué quieres escuchar?",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary,
+                            )
+                        }
+                        innerTextField()
+                    }
+                },
+            )
+            if (query.isNotEmpty()) {
+                Spacer(Modifier.width(8.dp))
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "Limpiar búsqueda",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
         }
     }
 }
