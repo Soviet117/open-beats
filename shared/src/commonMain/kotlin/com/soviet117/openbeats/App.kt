@@ -233,43 +233,44 @@ fun App(
                             BackHandler(enabled = libraryTarget != null) {
                                 libraryTarget = null
                             }
-                            when (selectedTab) {
-                                0 -> HomeScreen(
-                                    songs = songs,
+                            when (val target = libraryTarget) {
+                                is LibraryTarget.AlbumTarget -> AlbumDetailScreen(
+                                    album = target.album,
                                     likedIds = likedIds,
-                                    loading = loading,
-                                    appVersion = appVersion,
-                                    recents = recentSongs,
+                                    onBack = { libraryTarget = null },
                                     onPlay = onPlay,
                                     onToggleLike = toggleLike,
                                 )
-                                1 -> SearchScreen()
-                                else -> when (val target = libraryTarget) {
-                                    is LibraryTarget.AlbumTarget -> AlbumDetailScreen(
-                                        album = target.album,
+
+                                is LibraryTarget.ArtistTarget -> ArtistDetailScreen(
+                                    artist = target.artist,
+                                    likedIds = likedIds,
+                                    onBack = { libraryTarget = null },
+                                    onPlay = onPlay,
+                                    onToggleLike = toggleLike,
+                                )
+
+                                is LibraryTarget.GenreTarget -> GenreDetailScreen(
+                                    genre = target.genre,
+                                    likedIds = likedIds,
+                                    onBack = { libraryTarget = null },
+                                    onPlay = onPlay,
+                                    onToggleLike = toggleLike,
+                                )
+
+                                null -> when (selectedTab) {
+                                    0 -> HomeScreen(
+                                        songs = songs,
                                         likedIds = likedIds,
-                                        onBack = { libraryTarget = null },
+                                        loading = loading,
+                                        appVersion = appVersion,
+                                        recents = recentSongs,
                                         onPlay = onPlay,
                                         onToggleLike = toggleLike,
                                     )
 
-                                    is LibraryTarget.ArtistTarget -> ArtistDetailScreen(
-                                        artist = target.artist,
-                                        likedIds = likedIds,
-                                        onBack = { libraryTarget = null },
-                                        onPlay = onPlay,
-                                        onToggleLike = toggleLike,
-                                    )
-
-                                    is LibraryTarget.GenreTarget -> GenreDetailScreen(
-                                        genre = target.genre,
-                                        likedIds = likedIds,
-                                        onBack = { libraryTarget = null },
-                                        onPlay = onPlay,
-                                        onToggleLike = toggleLike,
-                                    )
-
-                                    null -> LibraryScreen(
+                                    1 -> SearchScreen()
+                                    else -> LibraryScreen(
                                         songs = songs,
                                         likedIds = likedIds,
                                         loading = loading,
