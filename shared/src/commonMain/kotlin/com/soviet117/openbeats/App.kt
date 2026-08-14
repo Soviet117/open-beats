@@ -31,7 +31,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -44,8 +46,11 @@ import com.soviet117.openbeats.data.FavoritesStore
 import com.soviet117.openbeats.data.RecentStore
 import com.soviet117.openbeats.ui.components.MiniPlayer
 import com.soviet117.openbeats.ui.components.ArtworkCache
+import com.soviet117.openbeats.ui.data.LibraryTarget
 import com.soviet117.openbeats.ui.data.Mock
 import com.soviet117.openbeats.ui.data.Song
+import com.soviet117.openbeats.ui.screens.AlbumDetailScreen
+import com.soviet117.openbeats.ui.screens.ArtistDetailScreen
 import com.soviet117.openbeats.ui.screens.HomeScreen
 import com.soviet117.openbeats.ui.screens.LibraryScreen
 import com.soviet117.openbeats.ui.screens.NowPlayingScreen
@@ -73,6 +78,7 @@ private val Tabs = listOf(
 
 @Composable
 @Preview
+@OptIn(ExperimentalComposeUiApi::class)
 fun App(
     permissionGranted: Boolean = true,
     onRequestPermission: () -> Unit = {},
@@ -92,6 +98,7 @@ fun App(
         var recentIds by remember { mutableStateOf(emptyList<String>()) }
         var recentsLoaded by remember { mutableStateOf(false) }
         var showPlayer by remember { mutableStateOf(false) }
+        var libraryTarget by remember { mutableStateOf<LibraryTarget?>(null) }
 
         LaunchedEffect(audioLibrary) {
             val library = audioLibrary ?: return@LaunchedEffect
@@ -155,7 +162,7 @@ fun App(
                 showPlayer = true
             }
         }
-        val onSelectTab: (Int) -> Unit = remember { { index -> selectedTab = index } }
+        val onSelectTab: (Int) -> Unit = remember { { index -> selectedTab = index; libraryTarget = null } }
         val onOpenPlayer: () -> Unit = remember { { showPlayer = true } }
         val onClosePlayer: () -> Unit = remember { { showPlayer = false } }
         val onTogglePlay: () -> Unit = remember { { controller.playPause() } }
@@ -221,6 +228,10 @@ fun App(
                         },
                     ) { padding ->
                         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+                            @Suppress("DEPRECATION")
+                            BackHandler(enabled = libraryTarget != null) {
+                                libraryTarget = null
+                            }
                             when (selectedTab) {
                                 0 -> HomeScreen(
                                     songs = songs,
@@ -232,16 +243,34 @@ fun App(
                                     onToggleLike = toggleLike,
                                 )
                                 1 -> SearchScreen()
-                                else -> LibraryScreen(
-                                    songs = songs,
-                                    likedIds = likedIds,
-                                    loading = loading,
-                                    onPlay = onPlay,
-                                    onToggleLike = toggleLike,
-                                    onOpenSearch = { onSelectTab(1) },
-                                    onOpenAlbum = { album -> onPlay(album.songs, 0) },
-                                    onOpenArtist = { artist -> onPlay(artist.songs, 0) },
-                                )
+                                else -> when (val target = libraryTarget) {
+                                    is LibraryTarget.AlbumTarget -> AlbumDetailScreen(
+                                        album = target.album,
+                                        likedIds = likedIds,
+                                        onBack = { libraryTarget = null },
+                                        onPlay = onPlay,
+                                        onToggleLike = toggleLike,
+                                    )
+
+                                    is LibraryTarget.ArtistTarget -> ArtistDetailScreen(
+                                        artist = target.artist,
+                                        likedIds = likedIds,
+                                        onBack = { libraryTarget = null },
+                                        onPlay = onPlay,
+                                        onToggleLike = toggleLike,
+                                    )
+
+                                    null -> LibraryScreen(
+                                        songs = songs,
+                                        likedIds = likedIds,
+                                        loading = loading,
+                                        onPlay = onPlay,
+                                        onToggleLike = toggleLike,
+                                        onOpenSearch = { onSelectTab(1) },
+                                        onOpenAlbum = { libraryTarget = LibraryTarget.AlbumTarget(it) },
+                                        onOpenArtist = { libraryTarget = LibraryTarget.ArtistTarget(it) },
+                                    )
+                                }
                             }
                         }
                     }

@@ -55,3 +55,8 @@ fun deriveArtists(songs: List<Song>): List<LibraryArtist> {
         )
     }.sortedBy { it.name.lowercase() }
 }
+
+sealed interface LibraryTarget {
+    data class AlbumTarget(val album: Album) : LibraryTarget
+    data class ArtistTarget(val artist: LibraryArtist) : LibraryTarget
+}
