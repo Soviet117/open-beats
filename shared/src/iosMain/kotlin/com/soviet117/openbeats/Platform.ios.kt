@@ -1,5 +1,8 @@
 package com.soviet117.openbeats
 
+import platform.Foundation.NSCalendar
+import platform.Foundation.NSCalendarUnitHour
+import platform.Foundation.NSDate
 import platform.UIKit.UIDevice
 
 class IOSPlatform: Platform {
@@ -7,3 +10,8 @@ class IOSPlatform: Platform {
 }
 
 actual fun getPlatform(): Platform = IOSPlatform()
+
+actual fun currentHour(): Int {
+    val calendar = NSCalendar.currentCalendar
+    return calendar.component(NSCalendarUnitHour, fromDate = NSDate()).toInt()
+}

@@ -41,6 +41,7 @@ import com.soviet117.openbeats.audio.MockPlayerController
 import com.soviet117.openbeats.audio.PlayerController
 import com.soviet117.openbeats.audio.PlayerState
 import com.soviet117.openbeats.data.FavoritesStore
+import com.soviet117.openbeats.data.RecentStore
 import com.soviet117.openbeats.ui.components.MiniPlayer
 import com.soviet117.openbeats.ui.components.ArtworkCache
 import com.soviet117.openbeats.ui.data.Mock
@@ -62,6 +63,8 @@ private data class Tab(
     val unselected: ImageVector,
 )
 
+private const val MAX_RECENTS = 12
+
 private val Tabs = listOf(
     Tab("Inicio", Icons.Filled.Home, Icons.Outlined.Home),
     Tab("Buscar", Icons.Filled.Search, Icons.Outlined.Search),
@@ -76,6 +79,7 @@ fun App(
     audioLibrary: AudioLibrary? = null,
     playerController: PlayerController? = null,
     favoritesStore: FavoritesStore? = null,
+    recentStore: RecentStore? = null,
     appVersion: String? = null,
 ) {
     OpenBeatsTheme {
@@ -85,6 +89,8 @@ fun App(
         var loading by remember { mutableStateOf(hasLibrary) }
         var likedIds by remember { mutableStateOf(emptySet<String>()) }
         var likesLoaded by remember { mutableStateOf(false) }
+        var recentIds by remember { mutableStateOf(emptyList<String>()) }
+        var recentsLoaded by remember { mutableStateOf(false) }
         var showPlayer by remember { mutableStateOf(false) }
 
         LaunchedEffect(audioLibrary) {
@@ -112,6 +118,12 @@ fun App(
             runCatching { store.save(likedIds) }
         }
 
+        LaunchedEffect(recentStore) {
+            val store = recentStore ?: return@LaunchedEffect
+            recentIds = runCatching { store.load() }.getOrDefault(emptyList())
+            recentsLoaded = true
+        }
+
         val toggleLike: (String) -> Unit = remember {
             { songId -> likedIds = if (songId in likedIds) likedIds - songId else likedIds + songId }
         }
@@ -129,6 +141,14 @@ fun App(
         val playerState by controller.state.collectAsState()
         val currentSong = playerState.currentSong
 
+        LaunchedEffect(currentSong?.id, recentsLoaded, recentStore) {
+            val song = currentSong ?: return@LaunchedEffect
+            val store = recentStore ?: return@LaunchedEffect
+            if (!recentsLoaded) return@LaunchedEffect
+            recentIds = (listOf(song.id) + recentIds.filter { it != song.id }).take(MAX_RECENTS)
+            runCatching { store.add(song.id) }
+        }
+
         val onPlay: (List<Song>, Int) -> Unit = remember {
             { queue, index ->
                 controller.setQueue(queue, index)
@@ -144,6 +164,9 @@ fun App(
         val onSeek: (Long) -> Unit = remember { { position -> controller.seekTo(position) } }
         val onToggleShuffle: () -> Unit = remember { { controller.toggleShuffle() } }
         val onCycleRepeat: () -> Unit = remember { { controller.cycleRepeat() } }
+
+        val songsById = remember(songs) { songs.associateBy { it.id } }
+        val recentSongs = if (recentStore != null) recentIds.mapNotNull { songsById[it] } else null
 
         CompositionLocalProvider(LocalAudioLibrary provides audioLibrary) {
             if (!permissionGranted) {
@@ -204,6 +227,7 @@ fun App(
                                     likedIds = likedIds,
                                     loading = loading,
                                     appVersion = appVersion,
+                                    recents = recentSongs,
                                     onPlay = onPlay,
                                     onToggleLike = toggleLike,
                                 )

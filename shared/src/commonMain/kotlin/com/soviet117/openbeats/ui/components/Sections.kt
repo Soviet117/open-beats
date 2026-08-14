@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.soviet117.openbeats.ui.data.Genre
 import com.soviet117.openbeats.ui.data.Playlist
+import com.soviet117.openbeats.ui.data.Song
 import com.soviet117.openbeats.ui.theme.BrandSoft
 import com.soviet117.openbeats.ui.theme.SurfaceHigh
 import com.soviet117.openbeats.ui.theme.TextPrimary
@@ -120,6 +121,7 @@ fun GenreCard(
 fun RecentTile(
     playlist: Playlist,
     modifier: Modifier = Modifier,
+    song: Song? = null,
     onClick: () -> Unit = {},
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -138,16 +140,26 @@ fun RecentTile(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Artwork(
-                colors = playlist.colors,
-                modifier = Modifier.size(56.dp),
-                corner = 8.dp,
-                noteSize = 22.dp,
-                solid = true,
-            )
+            if (song != null) {
+                SongArtwork(
+                    song = song,
+                    modifier = Modifier.size(56.dp),
+                    corner = 8.dp,
+                    noteSize = 22.dp,
+                    solid = true,
+                )
+            } else {
+                Artwork(
+                    colors = playlist.colors,
+                    modifier = Modifier.size(56.dp),
+                    corner = 8.dp,
+                    noteSize = 22.dp,
+                    solid = true,
+                )
+            }
             Spacer(Modifier.width(12.dp))
             Text(
-                text = playlist.name,
+                text = song?.title ?: playlist.name,
                 style = MaterialTheme.typography.titleSmall,
                 color = TextPrimary,
                 maxLines = 2,

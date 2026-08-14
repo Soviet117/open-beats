@@ -37,11 +37,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.soviet117.openbeats.currentHour
 import com.soviet117.openbeats.ui.components.RecentTile
 import com.soviet117.openbeats.ui.components.SectionHeader
 import com.soviet117.openbeats.ui.components.SongRow
 import com.soviet117.openbeats.ui.data.Playlist
 import com.soviet117.openbeats.ui.data.Song
+import com.soviet117.openbeats.ui.data.greetingForHour
 import com.soviet117.openbeats.ui.theme.BrandSoft
 import com.soviet117.openbeats.ui.theme.BrandViolet
 import com.soviet117.openbeats.ui.theme.SurfaceHigh
@@ -84,12 +86,15 @@ fun HomeScreen(
     onToggleLike: (String) -> Unit,
     loading: Boolean = false,
     appVersion: String? = null,
+    recents: List<Song>? = null,
     modifier: Modifier = Modifier,
 ) {
     val albums = remember(songs) { deriveAlbums(songs) }
-    val recent = albums.take(4)
+    val recentAlbums = if (recents == null) albums.take(4) else emptyList()
+    val recentSongs = recents.orEmpty().take(4)
     val favorites = remember(songs, likedIds) { songs.filter { it.id in likedIds } }
     var showAbout by remember { mutableStateOf(false) }
+    val greeting = remember { greetingForHour(currentHour()) }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -133,7 +138,7 @@ fun HomeScreen(
             }
             Spacer(Modifier.height(24.dp))
             Text(
-                text = "Buenas noches",
+                text = greeting,
                 style = MaterialTheme.typography.headlineLarge,
                 color = TextPrimary,
                 modifier = Modifier.padding(horizontal = 20.dp),
@@ -175,19 +180,52 @@ fun HomeScreen(
             }
             return@LazyColumn
         }
-        if (recent.isNotEmpty()) {
+        if (recentAlbums.isNotEmpty()) {
             item {
                 Column(
                     modifier = Modifier.padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    recent.chunked(2).forEach { rowItems ->
+                    recentAlbums.chunked(2).forEach { rowItems ->
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             rowItems.forEach { album ->
                                 RecentTile(
                                     playlist = album.playlist,
                                     modifier = Modifier.weight(1f),
                                     onClick = { onPlay(album.songs, 0) },
+                                )
+                            }
+                            if (rowItems.size == 1) {
+                                Spacer(Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (recentSongs.isNotEmpty()) {
+            item {
+                Column(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    recentSongs.chunked(2).forEach { rowItems ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            rowItems.forEach { song ->
+                                RecentTile(
+                                    playlist = Playlist(
+                                        id = song.id.hashCode(),
+                                        name = song.title,
+                                        subtitle = song.artist,
+                                        songCount = 1,
+                                        colors = song.colors,
+                                    ),
+                                    song = song,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        val queueIndex = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                                        onPlay(songs, queueIndex)
+                                    },
                                 )
                             }
                             if (rowItems.size == 1) {
