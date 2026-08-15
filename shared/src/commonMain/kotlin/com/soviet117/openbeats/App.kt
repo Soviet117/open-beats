@@ -194,6 +194,7 @@ fun App(
         val onNext: () -> Unit = remember { { controller.next() } }
         val onPrevious: () -> Unit = remember { { controller.previous() } }
         val onSeek: (Long) -> Unit = remember { { position -> controller.seekTo(position) } }
+        val onSkipToIndex: (Int) -> Unit = remember { { index -> controller.skipToIndex(index) } }
         val onToggleShuffle: () -> Unit = remember { { controller.toggleShuffle() } }
         val onCycleRepeat: () -> Unit = remember { { controller.cycleRepeat() } }
 
@@ -334,6 +335,8 @@ fun App(
                                 durationMs = playerState.durationMs.takeIf { it > 0 } ?: currentSong.durationMs,
                                 shuffle = playerState.shuffle,
                                 repeatMode = playerState.repeatMode,
+                                queue = playerState.queue,
+                                currentIndex = playerState.currentIndex,
                                 onClose = onClosePlayer,
                                 onTogglePlay = onTogglePlay,
                                 onToggleLike = { toggleLike(currentSong.id) },
@@ -342,6 +345,7 @@ fun App(
                                 onSeek = onSeek,
                                 onToggleShuffle = onToggleShuffle,
                                 onCycleRepeat = onCycleRepeat,
+                                onSkipToIndex = onSkipToIndex,
                             )
                         }
                     }
