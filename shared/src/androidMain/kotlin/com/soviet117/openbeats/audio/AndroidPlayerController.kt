@@ -141,6 +141,13 @@ class AndroidPlayerController(
         }
     }
 
+    override fun skipToIndex(index: Int) {
+        val controller = mediaController ?: return
+        if (index !in 0 until controller.mediaItemCount) return
+        controller.seekTo(index, C.TIME_UNSET)
+        update { it.copy(currentIndex = index, positionMs = 0L) }
+    }
+
     override fun playPause() {
         mediaController?.let { if (it.isPlaying) it.pause() else it.play() }
     }

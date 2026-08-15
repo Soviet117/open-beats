@@ -23,6 +23,7 @@ enum class RepeatMode { OFF, ALL, ONE }
 interface PlayerController {
     val state: StateFlow<PlayerState>
     fun setQueue(songs: List<Song>, startIndex: Int)
+    fun skipToIndex(index: Int)
     fun playPause()
     fun next()
     fun previous()
@@ -44,6 +45,17 @@ class MockPlayerController(initial: PlayerState) : PlayerController {
             durationMs = songs.getOrNull(startIndex)?.durationMs ?: 0L,
             shuffle = _state.value.shuffle,
             repeatMode = _state.value.repeatMode,
+        )
+    }
+
+    override fun skipToIndex(index: Int) {
+        val state = _state.value
+        if (index !in state.queue.indices) return
+        _state.value = state.copy(
+            currentIndex = index,
+            positionMs = 0L,
+            durationMs = state.queue[index].durationMs,
+            isPlaying = true,
         )
     }
 
