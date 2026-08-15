@@ -234,7 +234,7 @@ fun NowPlayingScreen(
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    text = "Escuchar en Z2359",
+                    text = "Escuchar en este dispositivo",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                     modifier = Modifier.weight(1f),
