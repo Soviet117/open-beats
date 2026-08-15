@@ -64,6 +64,7 @@ import com.soviet117.openbeats.ui.theme.Obsidian
 import com.soviet117.openbeats.ui.theme.OpenBeatsTheme
 import com.soviet117.openbeats.ui.theme.TextMuted
 import com.soviet117.openbeats.ui.theme.TextPrimary
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private data class Tab(
@@ -108,8 +109,13 @@ fun App(
 
         LaunchedEffect(audioLibrary) {
             val library = audioLibrary ?: return@LaunchedEffect
-            val loaded = runCatching { library.loadSongs() }
-                .getOrElse { emptyList() }
+            var loaded = runCatching { library.loadSongs() }.getOrElse { emptyList() }
+            var attempt = 0
+            while (loaded.isEmpty() && attempt < 2) {
+                attempt++
+                delay(3000)
+                loaded = runCatching { library.loadSongs() }.getOrElse { emptyList() }
+            }
             if (loaded.isNotEmpty()) {
                 songs = loaded
                 ArtworkCache.preload(loaded, library)
