@@ -12,6 +12,7 @@ interrumpen la reproducción. Y como todo programador... lo implementó :).
 - **Inicio**: recents, favoritas y todas tus canciones.
 - **Buscar** y **Biblioteca**.
 - **Now Playing** con posición, shuffle y repetir.
+- **Cola de reproducción** ("up next") desde Now Playing: salta a cualquier canción de la cola.
 - **Mini player** persistente sobre la barra de navegación.
 - **Favoritas** con persistencia local (por canción).
 - **Notificación media** con controles (anterior / play-pause / siguiente) y el
@@ -24,7 +25,7 @@ interrumpen la reproducción. Y como todo programador... lo implementó :).
 
 - **Kotlin Multiplatform** con **Compose Multiplatform** (UI compartida).
 - **Android**: ExoPlayer / media3 (reproducción + MediaSession/notificación).
-- **iOS**: targets `iosArm64` / `iosSimulatorArm64` (en progreso, sin desktop).
+- **iOS**: targets `iosArm64` / `iosSimulatorArm64`. Reproductor con **AVPlayer** y biblioteca con **MediaPlayer/MPMediaLibrary** (el build se verifica vía CI en GitHub Actions; requiere macOS para compilar).
 
 ## Estructura
 
@@ -34,6 +35,7 @@ shared/       Lógica + UI compartida (Compose). Source sets: commonMain,
   audio/      PlayerController, PlayerState, AudioLibrary, MockPlayerController
               AndroidPlayerController (MediaController → PlaybackService),
               MediaStoreAudioLibrary, PlaybackService (MediaSessionService)
+              iOS: AppleMusicLibrary (MPMediaLibrary), ApplePlayerController (AVPlayer)
   ui/         screens (Home, Search, Library, NowPlaying, Permission),
               components (MiniPlayer, ArtworkCache, Rows, Sections), data, theme
   composeResources/  recursos Compose (logo de la app: ic_ob_logo)
@@ -51,8 +53,11 @@ iosApp/       Proyecto Xcode (SwiftUI) que embebe el framework estático Shared
 
 ```bash
 ./gradlew :shared:testAndroidHostTest          # unit tests en host
-./gradlew :shared:iosSimulatorArm64Test        # tests iOS (simulador)
+./gradlew :shared:iosSimulatorArm64Test        # tests iOS (simulador, requiere macOS)
 ```
+
+CI en GitHub Actions: `.github/workflows/ci.yml` compila y testea Android
+(ubuntu) e iOS (macOS) en cada push/PR, y sube el APK debug y el framework.
 
 ## Licencia
 
