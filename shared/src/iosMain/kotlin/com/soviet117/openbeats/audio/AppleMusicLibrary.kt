@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSData
+import platform.MediaPlayer.MPMediaItem
 import platform.MediaPlayer.MPMediaItemPropertyAlbumTitle
 import platform.MediaPlayer.MPMediaItemPropertyArtist
 import platform.MediaPlayer.MPMediaItemPropertyGenre
@@ -25,7 +26,7 @@ import platform.UIKit.UIImageJPEGRepresentation
 class AppleMusicLibrary : AudioLibrary {
 
     override suspend fun loadSongs(): List<Song> = withContext(Dispatchers.Default) {
-        val items = MPMediaQuery.songsQuery().items.orEmpty()
+        val items = mediaItems()
         val songs = mutableListOf<Song>()
         var index = 0
         for (item in items) {
@@ -55,14 +56,17 @@ class AppleMusicLibrary : AudioLibrary {
     }
 
     override suspend fun loadArtwork(songId: String): ByteArray? = withContext(Dispatchers.Default) {
-        val items = MPMediaQuery.songsQuery().items.orEmpty()
-        val item = items.firstOrNull { candidate ->
+        val item = mediaItems().firstOrNull { candidate ->
             candidate.assetURL?.absoluteString == songId || "ios-${candidate.persistentID}" == songId
         } ?: return@withContext null
         val artwork = item.artwork ?: return@withContext null
         val image = artwork.imageWithSize(CGSizeMake(512.0, 512.0)) ?: return@withContext null
         UIImageJPEGRepresentation(image, 0.9)?.toByteArray()
     }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun mediaItems(): List<MPMediaItem> =
+        (MPMediaQuery.songsQuery().items as? List<MPMediaItem>) ?: emptyList()
 
     @OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
     private fun NSData.toByteArray(): ByteArray = ByteArray(length.toInt()).usePinned { pinned ->

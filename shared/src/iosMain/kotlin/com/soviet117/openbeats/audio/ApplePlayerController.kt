@@ -11,11 +11,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import platform.AVFoundation.AVAudioSession
-import platform.AVFoundation.AVAudioSessionCategoryPlayback
-import platform.AVFoundation.AVPlayer
-import platform.AVFoundation.AVPlayerItem
-import platform.AVFoundation.AVPlayerItemDidPlayToEndTimeNotification
+import platform.AVFAudio.*
+import platform.AVFoundation.*
+import platform.CoreMedia.CMTimeGetSeconds
 import platform.CoreMedia.CMTimeMakeWithSeconds
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSURL
@@ -169,7 +167,7 @@ class ApplePlayerController : PlayerController {
                 val avPlayer = player
                 if (avPlayer != null) {
                     update {
-                        it.copy(positionMs = (avPlayer.currentTime().seconds * 1000.0).toLong())
+                        it.copy(positionMs = (CMTimeGetSeconds(avPlayer.currentTime()) * 1000.0).toLong())
                     }
                 }
                 delay(500)

@@ -27,7 +27,7 @@ fun deriveAlbums(songs: List<Song>): List<Album> {
         val synthetic = song.album.isBlank()
         val key = MetadataCleaner.normalizeKey(if (synthetic) song.artist else song.album)
         groups.getOrPut(key) { mutableListOf() }.add(song)
-        names.putIfAbsent(key, if (synthetic) song.artist else song.album)
+        if (key !in names) names[key] = if (synthetic) song.artist else song.album
     }
     return groups.map { (key, albumSongs) ->
         Album(
@@ -45,7 +45,7 @@ fun deriveArtists(songs: List<Song>): List<LibraryArtist> {
     for (song in songs) {
         val key = MetadataCleaner.normalizeKey(song.artist)
         groups.getOrPut(key) { mutableListOf() }.add(song)
-        names.putIfAbsent(key, song.artist)
+        if (key !in names) names[key] = song.artist
     }
     return groups.map { (key, artistSongs) ->
         LibraryArtist(
@@ -77,7 +77,7 @@ fun deriveGenres(songs: List<Song>): List<LibraryGenre> {
         val key = MetadataCleaner.normalizeSearchKey(genre)
         if (key.isEmpty()) continue
         groups.getOrPut(key) { mutableListOf() }.add(song)
-        names.putIfAbsent(key, genre)
+        if (key !in names) names[key] = genre
     }
     return groups.map { (key, genreSongs) ->
         LibraryGenre(
