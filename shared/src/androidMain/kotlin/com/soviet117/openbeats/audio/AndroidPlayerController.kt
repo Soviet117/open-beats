@@ -276,9 +276,10 @@ class AndroidPlayerController(
         notificationArtwork?.let {
             metadata.setArtworkData(it, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
         }
+        val uri = if (id.startsWith("http://") || id.startsWith("https://")) id else id
         return MediaItem.Builder()
             .setMediaId(id)
-            .setUri(id)
+            .setUri(uri)
             .setMediaMetadata(metadata.build())
             .build()
     }
