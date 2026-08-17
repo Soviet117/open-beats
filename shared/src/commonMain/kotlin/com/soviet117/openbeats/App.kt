@@ -301,6 +301,17 @@ fun App(
                                         likedIds = likedIds,
                                         loading = loading,
                                         onPlay = onPlay,
+                                        onPlayYouTube = { ytSong ->
+                                            scope.launch {
+                                                val resolved = com.soviet117.openbeats.audio.yt.YouTubeSearchSource()
+                                                    .resolveAndPlay(
+                                                        ytSong.id.removePrefix("yt:"),
+                                                    )
+                                                if (resolved != null) {
+                                                    onPlay(listOf(resolved), 0)
+                                                }
+                                            }
+                                        },
                                         onToggleLike = toggleLike,
                                         onOpenAlbum = { libraryTarget = LibraryTarget.AlbumTarget(it) },
                                         onOpenArtist = { libraryTarget = LibraryTarget.ArtistTarget(it) },

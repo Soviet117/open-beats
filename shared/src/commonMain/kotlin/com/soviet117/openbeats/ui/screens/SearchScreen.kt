@@ -32,12 +32,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.soviet117.openbeats.audio.yt.YouTubeSearchSource
 import com.soviet117.openbeats.ui.components.ArtistRow
 import com.soviet117.openbeats.ui.components.Chip
 import com.soviet117.openbeats.ui.components.GenreCard
@@ -49,7 +51,6 @@ import com.soviet117.openbeats.ui.data.Genre
 import com.soviet117.openbeats.ui.data.LibraryArtist
 import com.soviet117.openbeats.ui.data.LibraryGenre
 import com.soviet117.openbeats.ui.data.Mock
-import com.soviet117.openbeats.ui.data.MusicSearchSource
 import com.soviet117.openbeats.ui.data.Playlist
 import com.soviet117.openbeats.ui.data.Song
 import com.soviet117.openbeats.ui.data.deriveGenres
@@ -60,27 +61,46 @@ import com.soviet117.openbeats.ui.theme.SurfaceHigh
 import com.soviet117.openbeats.ui.theme.TextPrimary
 import com.soviet117.openbeats.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun SearchScreen(
     songs: List<Song> = Mock.songs,
     likedIds: Set<String> = emptySet(),
     onPlay: (List<Song>, Int) -> Unit = { _, _ -> },
+    onPlayYouTube: (Song) -> Unit = {},
     onToggleLike: (String) -> Unit = {},
     loading: Boolean = false,
     onOpenAlbum: (Album) -> Unit = {},
     onOpenArtist: (LibraryArtist) -> Unit = {},
     onOpenGenre: (LibraryGenre) -> Unit = {},
-    remoteSearch: MusicSearchSource? = null,
     modifier: Modifier = Modifier,
 ) {
     val genres = remember(songs) { deriveGenres(songs) }
     var query by remember { mutableStateOf("") }
     var debouncedQuery by remember { mutableStateOf("") }
+    var youtubeResults by remember { mutableStateOf(emptyList<Song>()) }
+    var youtubeLoading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val youtubeSource = remember { YouTubeSearchSource() }
 
     LaunchedEffect(query) {
         delay(250)
         debouncedQuery = query
+    }
+
+    LaunchedEffect(debouncedQuery) {
+        if (debouncedQuery.isBlank()) {
+            youtubeResults = emptyList()
+            return@LaunchedEffect
+        }
+        youtubeLoading = true
+        youtubeResults = try {
+            youtubeSource.search(debouncedQuery)
+        } catch (_: Exception) {
+            emptyList()
+        }
+        youtubeLoading = false
     }
 
     val results = remember(debouncedQuery, songs) { searchLibrary(debouncedQuery, songs) }
@@ -258,7 +278,42 @@ fun SearchScreen(
                     Spacer(Modifier.height(28.dp))
                 }
             }
-            if (results.isEmpty) {
+
+            if (youtubeResults.isNotEmpty() || youtubeLoading) {
+                item {
+                    SectionHeader(title = "YouTube Music")
+                }
+                item {
+                    Spacer(Modifier.height(4.dp))
+                }
+                if (youtubeLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(
+                                color = BrandViolet,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                    }
+                } else {
+                    itemsIndexed(youtubeResults, key = { _, song -> "yt-${song.id}" }) { index, song ->
+                        YouTubeSongRow(
+                            song = song,
+                            index = index + 1,
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                            onClick = { onPlayYouTube(song) },
+                        )
+                    }
+                }
+                item {
+                    Spacer(Modifier.height(28.dp))
+                }
+            }
+
+            if (results.isEmpty && youtubeResults.isEmpty() && !youtubeLoading) {
                 item {
                     Text(
                         text = "Sin resultados para \"$debouncedQuery\"",
@@ -268,6 +323,65 @@ fun SearchScreen(
                         textAlign = TextAlign.Center,
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun YouTubeSongRow(
+    song: Song,
+    index: Int,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = SurfaceHigh,
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        color = androidx.compose.ui.graphics.Color(0x1AFF0000),
+                        shape = RoundedCornerShape(8.dp),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "YT",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = androidx.compose.ui.graphics.Color(0xFFFF0000),
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary,
+                    maxLines = 1,
+                )
+                Text(
+                    text = song.artist,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 1,
+                )
+            }
+            if (song.durationMs > 0) {
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = com.soviet117.openbeats.ui.data.formatDuration(song.durationMs),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                )
             }
         }
     }
