@@ -13,7 +13,9 @@ object InnerTubeClient {
         "https://music.youtube.com/youtubei/v1/search?key=AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30"
     private const val PLAYER_URL =
         "https://music.youtube.com/youtubei/v1/player?key=AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30"
-    private const val USER_AGENT =
+    private const val WEB_USER_AGENT =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    private const val ANDROID_USER_AGENT =
         "com.google.android.apps.youtube.music/7.27.52 (Linux; U; Android 12; US) gzip"
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -44,9 +46,8 @@ object InnerTubeClient {
         {
             "context": {
                 "client": {
-                    "clientName": "ANDROID_MUSIC",
-                    "clientVersion": "7.27.52",
-                    "androidSdkVersion": 31,
+                    "clientName": "WEB_REMIX",
+                    "clientVersion": "1.20241219.01.00",
                     "hl": "es",
                     "gl": "MX"
                 }
@@ -58,7 +59,7 @@ object InnerTubeClient {
 
         val response = httpPost(
             url = SEARCH_URL,
-            headers = mapOf("User-Agent" to USER_AGENT),
+            headers = mapOf("User-Agent" to WEB_USER_AGENT),
             body = body,
         )
         return parseSearchResults(response, limit)
@@ -70,22 +71,37 @@ object InnerTubeClient {
         {
             "context": {
                 "client": {
-                    "clientName": "ANDROID_MUSIC",
-                    "clientVersion": "7.27.52",
-                    "androidSdkVersion": 31,
+                    "clientName": "ANDROID_VR",
+                    "clientVersion": "1.57.29",
+                    "androidSdkVersion": 32,
                     "hl": "es",
-                    "gl": "MX"
+                    "gl": "MX",
+                    "osName": "Android",
+                    "osVersion": "12",
+                    "platform": "MOBILE"
                 }
             },
-            "videoId": $videoIdJson
+            "videoId": $videoIdJson,
+            "racyCheckOk": true,
+            "contentCheckOk": true,
+            "playbackContext": {
+                "contentPlaybackContext": {
+                    "signatureTimestamp": 20073
+                }
+            }
         }
         """.trimIndent()
 
         val response = httpPost(
             url = PLAYER_URL,
-            headers = mapOf("User-Agent" to USER_AGENT),
+            headers = mapOf(
+                "User-Agent" to "com.google.android.apps.youtube.vr.oculus/1.57.29 (Linux; U; Android 12; eureka-user Build/SQ3A.220605.009.A1) gzip",
+                "X-Goog-Api-Key" to "AIzaSyDCU8hByM-4DrUqRUYnGn-3llEO78bcxq8",
+            ),
             body = body,
         )
+        println("YTInnerTube: Player response length: ${response.length}")
+        if (response.length < 500) println("YTInnerTube: Player response: $response")
         return parseStreamInfo(response)
     }
 
@@ -118,12 +134,25 @@ object InnerTubeClient {
 
                 for (section in sections) {
                     val sectionObj = section as? JsonObject ?: continue
-                    val musicShelf = sectionObj["musicShelfRenderer"] as? JsonObject ?: continue
-                    val items = musicShelf["contents"] as? JsonArray ?: continue
 
-                    for (item in items) {
-                        val itemObj = item as? JsonObject ?: continue
-                        val renderer = itemObj["musicResponsiveListItemRenderer"] as? JsonObject ?: continue
+                    val cardShelf = sectionObj["musicCardShelfRenderer"] as? JsonObject
+                    if (cardShelf != null) {
+                        val cardItems = cardShelf["contents"] as? JsonArray ?: continue
+                        for (item in cardItems) {
+                            val itemObj = item as? JsonObject ?: continue
+                            val renderer = itemObj["musicResponsiveListItemRenderer"] as? JsonObject ?: continue
+                            val result = parseSearchItem(renderer) ?: continue
+                            results.add(result)
+                            if (results.size >= limit) return results
+                        }
+                        continue
+                    }
+
+                    val isr = sectionObj["itemSectionRenderer"] as? JsonObject ?: continue
+                    val isrContents = isr["contents"] as? JsonArray ?: continue
+                    for (isrItem in isrContents) {
+                        val isrObj = isrItem as? JsonObject ?: continue
+                        val renderer = isrObj["musicResponsiveListItemRenderer"] as? JsonObject ?: continue
                         val result = parseSearchItem(renderer) ?: continue
                         results.add(result)
                         if (results.size >= limit) return results
@@ -230,8 +259,16 @@ object InnerTubeClient {
             val lengthSeconds = ((videoDetails?.get("lengthSeconds") as? JsonPrimitive)?.content
                 ?: "0").toLongOrNull() ?: 0L
 
-            val streamingData = root["streamingData"] as? JsonObject ?: return null
-            val formats = streamingData["adaptiveFormats"] as? JsonArray ?: return null
+            val streamingData = root["streamingData"] as? JsonObject
+            if (streamingData == null) {
+                println("YTInnerTube: No streamingData. Root keys: ${root.keys}")
+                return null
+            }
+            val formats = streamingData["adaptiveFormats"] as? JsonArray
+            if (formats == null) {
+                println("YTInnerTube: No adaptiveFormats. streamingData keys: ${streamingData.keys}")
+                return null
+            }
 
             var bestBitrate = 0L
             var bestAudioUrl: String? = null

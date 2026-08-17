@@ -59,6 +59,7 @@ import com.soviet117.openbeats.ui.screens.LibraryScreen
 import com.soviet117.openbeats.ui.screens.NowPlayingScreen
 import com.soviet117.openbeats.ui.screens.PermissionScreen
 import com.soviet117.openbeats.ui.screens.SearchScreen
+import com.soviet117.openbeats.ui.screens.YouTubePlayerOverlay
 import com.soviet117.openbeats.ui.theme.BrandSoft
 import com.soviet117.openbeats.ui.theme.Obsidian
 import com.soviet117.openbeats.ui.theme.OpenBeatsTheme
@@ -106,6 +107,7 @@ fun App(
         var showPlayer by remember { mutableStateOf(false) }
         var libraryTarget by remember { mutableStateOf<LibraryTarget?>(null) }
         var showGenreTip by remember { mutableStateOf(false) }
+        var ytSong by remember { mutableStateOf<Song?>(null) }
 
         LaunchedEffect(audioLibrary) {
             val library = audioLibrary ?: return@LaunchedEffect
@@ -301,17 +303,7 @@ fun App(
                                         likedIds = likedIds,
                                         loading = loading,
                                         onPlay = onPlay,
-                                        onPlayYouTube = { ytSong ->
-                                            scope.launch {
-                                                val resolved = com.soviet117.openbeats.audio.yt.YouTubeSearchSource()
-                                                    .resolveAndPlay(
-                                                        ytSong.id.removePrefix("yt:"),
-                                                    )
-                                                if (resolved != null) {
-                                                    onPlay(listOf(resolved), 0)
-                                                }
-                                            }
-                                        },
+                                        onPlayYouTube = { song -> ytSong = song },
                                         onToggleLike = toggleLike,
                                         onOpenAlbum = { libraryTarget = LibraryTarget.AlbumTarget(it) },
                                         onOpenArtist = { libraryTarget = LibraryTarget.ArtistTarget(it) },
@@ -359,6 +351,15 @@ fun App(
                                 onSkipToIndex = onSkipToIndex,
                             )
                         }
+                    }
+
+                    if (ytSong != null) {
+                        @Suppress("DEPRECATION")
+                        BackHandler { ytSong = null }
+                        YouTubePlayerOverlay(
+                            song = ytSong!!,
+                            onClose = { ytSong = null },
+                        )
                     }
                 }
             }

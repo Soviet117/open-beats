@@ -29,9 +29,17 @@ class YouTubeSearchSource {
 
     suspend fun resolveAndPlay(videoId: String): Song? {
         return try {
-            val streamInfo = InnerTubeClient.resolveStream(videoId) ?: return null
-            InnerTubeClient.streamToSong(streamInfo, videoId)
-        } catch (_: Exception) {
+            println("YTResolve: Resolving videoId=$videoId")
+            val streamInfo = InnerTubeClient.resolveStream(videoId)
+            println("YTResolve: streamInfo=${streamInfo?.title}, url=${streamInfo?.url?.take(80)}")
+            if (streamInfo != null) {
+                val song = InnerTubeClient.streamToSong(streamInfo, videoId)
+                println("YTResolve: Song created: ${song.title}, id=${song.id.take(80)}")
+                song
+            } else null
+        } catch (e: Exception) {
+            println("YTResolve: Error: ${e.message}")
+            e.printStackTrace()
             null
         }
     }
